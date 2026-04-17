@@ -185,7 +185,7 @@ export function TripPlannerScreen({
               style={styles.searchInput}
             />
           </View>
-          {showSourceSuggestions && sourceSuggestions.length > 0 && (
+          {showSourceSuggestions && source.trim().length > 0 && sourceSuggestions.length > 0 && (
             <View style={styles.suggestionsDropdown}>
               {sourceSuggestions.map((suggestion, idx) => (
                 <Pressable
@@ -225,7 +225,7 @@ export function TripPlannerScreen({
               style={styles.searchInput}
             />
           </View>
-          {showDestSuggestions && destSuggestions.length > 0 && (
+          {showDestSuggestions && destination.trim().length > 0 && destSuggestions.length > 0 && (
             <View style={styles.suggestionsDropdown}>
               {destSuggestions.map((suggestion, idx) => (
                 <Pressable

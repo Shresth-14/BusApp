@@ -10,7 +10,7 @@ import {
 } from './src/screens';
 
 export default function App() {
-  const [tab, setTab] = useState<BottomTabKey>('tickets');
+  const [tab, setTab] = useState<BottomTabKey>('routes');
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [isTrackingRoute, setIsTrackingRoute] = useState(false);
 
