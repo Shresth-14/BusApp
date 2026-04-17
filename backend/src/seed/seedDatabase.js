@@ -1,4 +1,5 @@
 require('dotenv').config();
+const mongoose = require('mongoose');
 
 const { connectDB } = require('../config/db');
 const BusStop = require('../models/BusStop');
@@ -12,10 +13,14 @@ const {
   buildRoutesWithGeometry,
 } = require('./haryanaSeedData');
 
-async function seedDatabase() {
-  await connectDB(process.env.MONGODB_URI);
+async function seedDatabase({ reset = true, connect = true } = {}) {
+  if (connect && mongoose.connection.readyState !== 1) {
+    await connectDB(process.env.MONGODB_URI);
+  }
 
-  await Promise.all([BusStop.deleteMany({}), Route.deleteMany({}), Trip.deleteMany({}), Journey.deleteMany({})]);
+  if (reset) {
+    await Promise.all([BusStop.deleteMany({}), Route.deleteMany({}), Trip.deleteMany({}), Journey.deleteMany({})]);
+  }
 
   const stops = stopDefinitions.map((stop) => ({
     ...stop,
@@ -56,10 +61,45 @@ async function seedDatabase() {
   console.log(`Trips: ${trips.length}`);
   console.log(`Journeys: ${journeyDefinitions.length}`);
 
-  process.exit(0);
+  return {
+    stops: stops.length,
+    routes: routes.length,
+    trips: trips.length,
+    journeys: journeyDefinitions.length,
+  };
 }
 
-seedDatabase().catch((err) => {
-  console.error('Seed failed:', err.message);
-  process.exit(1);
-});
+async function ensureSeedData() {
+  if (mongoose.connection.readyState !== 1) {
+    await connectDB(process.env.MONGODB_URI);
+  }
+
+  const [stopsCount, routesCount, tripsCount, journeysCount] = await Promise.all([
+    BusStop.countDocuments(),
+    Route.countDocuments(),
+    Trip.countDocuments(),
+    Journey.countDocuments(),
+  ]);
+
+  if (stopsCount === 0 && routesCount === 0 && tripsCount === 0 && journeysCount === 0) {
+    return seedDatabase({ reset: false, connect: false });
+  }
+
+  return {
+    stops: stopsCount,
+    routes: routesCount,
+    trips: tripsCount,
+    journeys: journeysCount,
+  };
+}
+
+if (require.main === module) {
+  seedDatabase()
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error('Seed failed:', err.message);
+      process.exit(1);
+    });
+}
+
+module.exports = { seedDatabase, ensureSeedData };

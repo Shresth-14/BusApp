@@ -3,6 +3,7 @@ require('dotenv').config();
 const app = require('./app');
 const { connectDB } = require('./config/db');
 const { startLiveSimulation, stopLiveSimulation } = require('./services/liveSimulator');
+const { ensureSeedData } = require('./seed/seedDatabase');
 
 const PORT = Number(process.env.PORT || 4000);
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -36,6 +37,9 @@ async function bootstrap() {
       await connectDB(MONGODB_URI);
       runtimeState.dbConnected = true;
       runtimeState.lastDbError = null;
+
+      const seedStats = await ensureSeedData();
+      app.locals.seedStats = seedStats;
 
       if (!runtimeState.simulationRunning) {
         await startLiveSimulation(LIVE_SIMULATION_INTERVAL_MS);
