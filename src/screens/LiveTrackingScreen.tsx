@@ -6,24 +6,27 @@ import { AppButton, AppIcon, BottomNav, ScreenShell } from '../components/primit
 import { LeafletMapCard } from '../components/sections';
 import { useAppFeedback } from '../feedback/useAppFeedback';
 import { useDeviceClass } from '../utils/device';
-import { getLiveBus, getRouteDetails } from '../api/haryanaApi';
+import { getAllRoutes, getLiveBus, getRouteDetails } from '../api/haryanaApi';
 import { BackendLiveBus, BackendRouteDetails } from '../types/backend';
 
 type LiveTrackingScreenProps = {
   onTabPress?: (tab: BottomTabKey) => void;
-  busId?: string;
+  routeId?: string;
   onRouteSelect?: (routeId: string) => void;
 };
 
 export function LiveTrackingScreen({
   onTabPress,
-  busId = 'HRY-BUS-101',
+  routeId,
   onRouteSelect,
 }: LiveTrackingScreenProps) {
   const { notify } = useAppFeedback();
   const { height, isCompact, isPlusMax, isSE } = useDeviceClass();
+  const [busNumber, setBusNumber] = useState<string | null>(null);
   const [liveBus, setLiveBus] = useState<BackendLiveBus | null>(null);
   const [route, setRoute] = useState<BackendRouteDetails | null>(null);
+  const [isBusLoading, setIsBusLoading] = useState(true);
+  const [busError, setBusError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const mapRatio = isSE ? 0.39 : isCompact ? 0.42 : isPlusMax ? 0.49 : 0.46;
   const mapHeight = Math.max(236, Math.min(440, Math.round(height * mapRatio)));
@@ -31,9 +34,68 @@ export function LiveTrackingScreen({
   useEffect(() => {
     let mounted = true;
 
-    const load = async () => {
+    const resolveBusNumber = async () => {
       try {
-        const live = await getLiveBus(busId);
+        setIsBusLoading(true);
+        setBusError(null);
+
+        const routes = await getAllRoutes();
+        if (!mounted) return;
+
+        if (!routes.length) {
+          setBusNumber(null);
+          setBusError('No buses available.');
+          return;
+        }
+
+        const preferredRoute = routeId ? routes.find((r) => r.route_id === routeId) : routes[0];
+        const firstRouteWithBus = routes.find((r) => r.buses?.length);
+        const selectedRoute = preferredRoute?.buses?.length ? preferredRoute : firstRouteWithBus;
+        const resolvedBus = selectedRoute?.buses?.[0]?.busNumber;
+
+        if (!resolvedBus) {
+          setBusNumber(null);
+          setBusError('No buses available.');
+          return;
+        }
+
+        setBusNumber(resolvedBus);
+        if (selectedRoute?.route_id) {
+          onRouteSelect?.(selectedRoute.route_id);
+        }
+      } catch (error) {
+        if (!mounted) return;
+        const message = error instanceof Error ? error.message : 'Unable to load routes.';
+        setBusNumber(null);
+        setBusError(message);
+      } finally {
+        if (mounted) setIsBusLoading(false);
+      }
+    };
+
+    resolveBusNumber();
+
+    return () => {
+      mounted = false;
+    };
+  }, [routeId, onRouteSelect]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      if (!busNumber) {
+        if (mounted) {
+          setLiveBus(null);
+          setRoute(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const live = await getLiveBus(busNumber);
         if (!mounted) return;
         setLiveBus(live);
 
@@ -43,6 +105,7 @@ export function LiveTrackingScreen({
       } catch (error) {
         if (!mounted) return;
         const message = error instanceof Error ? error.message : 'Unable to load live bus data.';
+        setBusError(message);
         notify(message, {
           analyticsEvent: 'live_fetch_error',
         });
@@ -51,14 +114,19 @@ export function LiveTrackingScreen({
       }
     };
 
-    load();
-    const timer = setInterval(load, 7000);
+    if (busNumber) {
+      load();
+    }
+
+    const timer = setInterval(() => {
+      if (busNumber) load();
+    }, 7000);
 
     return () => {
       mounted = false;
       clearInterval(timer);
     };
-  }, [busId, notify]);
+  }, [busNumber, notify]);
 
   const mapCenter = liveBus?.current_location ?? route?.polyline.points[0] ?? { lat: 28.989, lng: 77.02 };
   const routePath = route?.polyline.points ?? [];
@@ -112,7 +180,13 @@ export function LiveTrackingScreen({
           <View style={[styles.titleCard, isCompact && styles.titleCardCompact]}>
             <Text style={[styles.title, isCompact && styles.titleCompact]} numberOfLines={1}>Live Tracking</Text>
             <Text style={styles.subtitle} numberOfLines={1}>
-              {isLoading ? 'Loading live data...' : 'हरियाणा रोडवेज लाइव बस ट्रैकिंग'}
+              {isBusLoading
+                ? 'Finding available buses...'
+                : isLoading
+                  ? 'Loading live data...'
+                  : busError
+                    ? 'No buses available right now'
+                    : `Tracking ${busNumber}`}
             </Text>
           </View>
 
@@ -130,10 +204,12 @@ export function LiveTrackingScreen({
       </View>
 
       <ScrollView contentContainerStyle={[styles.sheetContent, isCompact && styles.sheetContentCompact]}>
+        {!!busError && <Text style={styles.errorText}>{busError}</Text>}
+
         <View style={[styles.etaCard, isCompact && styles.etaCardCompact]}>
           <View>
             <Text style={[styles.route, isCompact && styles.routeCompact]}>{liveBus?.route_id || 'Route --'}</Text>
-            <Text style={styles.routeSub}>{liveBus?.route_name || 'Live Haryana Roadways route'}</Text>
+            <Text style={styles.routeSub}>{liveBus?.route_name || 'No active bus selected'}</Text>
           </View>
           <Text style={[styles.eta, isCompact && styles.etaCompact]}>
             ETA {liveBus?.eta_to_next_stop ?? '--'} min
@@ -282,6 +358,11 @@ const styles = StyleSheet.create({
     color: appTheme.colors.textMuted,
     fontSize: 13,
     marginTop: 2,
+  },
+  errorText: {
+    color: appTheme.colors.errorRed,
+    fontSize: 13,
+    fontWeight: '500',
   },
   eta: {
     color: '#2E7D32',

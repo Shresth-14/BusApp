@@ -4,6 +4,9 @@ export type BackendRouteSummary = {
   stops: string[];
   distance_km: number;
   estimated_time_minutes: number;
+  buses: Array<{
+    busNumber: string;
+  }>;
 };
 
 export type BackendRouteStop = {

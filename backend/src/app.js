@@ -8,7 +8,16 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/health', (req, res) => {
-  res.json({ success: true, service: 'haryanago-backend', status: 'ok' });
+  const runtimeState = req.app.locals.runtimeState || {};
+
+  res.json({
+    success: true,
+    service: 'haryanago-backend',
+    status: 'ok',
+    db: runtimeState.dbConnected ? 'connected' : 'disconnected',
+    simulation: runtimeState.simulationRunning ? 'running' : 'stopped',
+    last_db_error: runtimeState.lastDbError || null,
+  });
 });
 
 app.use('/', api);

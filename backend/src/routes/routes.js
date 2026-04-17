@@ -1,21 +1,36 @@
 const express = require('express');
 const Route = require('../models/Route');
 const BusStop = require('../models/BusStop');
+const Trip = require('../models/Trip');
 const { suggestRoutes } = require('../services/routeSearch');
 
 const router = express.Router();
 
 router.get('/', async (req, res, next) => {
   try {
-    const routes = await Route.find({})
-      .select('route_id route_name distance_km estimated_time_minutes stops updatedAt')
-      .sort({ route_id: 1 })
-      .lean();
+    const [routes, trips] = await Promise.all([
+      Route.find({})
+        .select('route_id route_name distance_km estimated_time_minutes stops updatedAt')
+        .sort({ route_id: 1 })
+        .lean(),
+      Trip.find({}).select('bus_id route_id').lean(),
+    ]);
+
+    const busesByRoute = trips.reduce((acc, trip) => {
+      if (!acc[trip.route_id]) acc[trip.route_id] = [];
+      acc[trip.route_id].push({ busNumber: trip.bus_id });
+      return acc;
+    }, {});
+
+    const routesWithBuses = routes.map((route) => ({
+      ...route,
+      buses: busesByRoute[route.route_id] || [],
+    }));
 
     res.json({
       success: true,
-      count: routes.length,
-      data: routes,
+      count: routesWithBuses.length,
+      data: routesWithBuses,
     });
   } catch (err) {
     next(err);
