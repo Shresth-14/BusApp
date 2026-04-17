@@ -3,11 +3,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BottomTabKey } from '../types/ui';
 import { appTheme } from '../theme';
 import { AppButton, AppIcon, BottomNav, ScreenShell } from '../components/primitives';
-import { LeafletMapCard } from '../components/sections';
+import { LeafletMapCard, BusSelector } from '../components/sections';
 import { useAppFeedback } from '../feedback/useAppFeedback';
 import { useDeviceClass } from '../utils/device';
 import { getAllRoutes, getLiveBus, getRouteDetails } from '../api/haryanaApi';
 import { BackendLiveBus, BackendRouteDetails } from '../types/backend';
+import type { BusItem } from '../components/sections/BusSelector';
 
 type LiveTrackingScreenProps = {
   onTabPress?: (tab: BottomTabKey) => void;
@@ -22,69 +23,78 @@ export function LiveTrackingScreen({
 }: LiveTrackingScreenProps) {
   const { notify } = useAppFeedback();
   const { height, isCompact, isPlusMax, isSE } = useDeviceClass();
-  const [busNumber, setBusNumber] = useState<string | null>(null);
+  const [buses, setBuses] = useState<BusItem[]>([]);
+  const [selectedBus, setSelectedBus] = useState<BusItem | null>(null);
+  const [busesLoading, setBusesLoading] = useState(true);
   const [liveBus, setLiveBus] = useState<BackendLiveBus | null>(null);
   const [route, setRoute] = useState<BackendRouteDetails | null>(null);
-  const [isBusLoading, setIsBusLoading] = useState(true);
   const [busError, setBusError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const mapRatio = isSE ? 0.39 : isCompact ? 0.42 : isPlusMax ? 0.49 : 0.46;
   const mapHeight = Math.max(236, Math.min(440, Math.round(height * mapRatio)));
 
+  // Fetch all buses from all routes
   useEffect(() => {
     let mounted = true;
 
-    const resolveBusNumber = async () => {
+    const loadAllBuses = async () => {
       try {
-        setIsBusLoading(true);
+        setBusesLoading(true);
         setBusError(null);
 
         const routes = await getAllRoutes();
         if (!mounted) return;
 
-        if (!routes.length) {
-          setBusNumber(null);
-          setBusError('No buses available.');
-          return;
-        }
+        // Flatten all buses from all routes
+        const allBuses: BusItem[] = [];
+        routes.forEach((route) => {
+          route.buses?.forEach((bus) => {
+            allBuses.push({
+              busNumber: bus.busNumber,
+              routeName: route.route_name,
+              from: route.stops?.[0] || 'Start',
+              to: route.stops?.[route.stops.length - 1] || 'End',
+            });
+          });
+        });
 
-        const preferredRoute = routeId ? routes.find((r) => r.route_id === routeId) : routes[0];
-        const firstRouteWithBus = routes.find((r) => r.buses?.length);
-        const selectedRoute = preferredRoute?.buses?.length ? preferredRoute : firstRouteWithBus;
-        const resolvedBus = selectedRoute?.buses?.[0]?.busNumber;
+        if (!mounted) return;
+        setBuses(allBuses);
 
-        if (!resolvedBus) {
-          setBusNumber(null);
-          setBusError('No buses available.');
-          return;
-        }
-
-        setBusNumber(resolvedBus);
-        if (selectedRoute?.route_id) {
-          onRouteSelect?.(selectedRoute.route_id);
+        if (!selectedBus && allBuses.length > 0) {
+          // Auto-select first bus or bus on preferred route
+          let initialBus = allBuses[0];
+          if (routeId) {
+            const preferredBus = allBuses.find((b) => {
+              const routeForBus = routes.find((r) => r.route_id === routeId);
+              return routeForBus?.buses?.some((rb) => rb.busNumber === b.busNumber);
+            });
+            if (preferredBus) initialBus = preferredBus;
+          }
+          setSelectedBus(initialBus);
         }
       } catch (error) {
         if (!mounted) return;
-        const message = error instanceof Error ? error.message : 'Unable to load routes.';
-        setBusNumber(null);
+        const message = error instanceof Error ? error.message : 'Unable to load buses.';
         setBusError(message);
       } finally {
-        if (mounted) setIsBusLoading(false);
+        if (mounted) setBusesLoading(false);
       }
     };
 
-    resolveBusNumber();
+    loadAllBuses();
 
     return () => {
       mounted = false;
     };
-  }, [routeId, onRouteSelect]);
+  }, [routeId]);
 
+  // Fetch live bus data when selected bus changes
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
-      if (!busNumber) {
+      if (!selectedBus) {
         if (mounted) {
           setLiveBus(null);
           setRoute(null);
@@ -95,7 +105,8 @@ export function LiveTrackingScreen({
 
       try {
         setIsLoading(true);
-        const live = await getLiveBus(busNumber);
+        setBusError(null);
+        const live = await getLiveBus(selectedBus.busNumber);
         if (!mounted) return;
         setLiveBus(live);
 
@@ -114,19 +125,19 @@ export function LiveTrackingScreen({
       }
     };
 
-    if (busNumber) {
+    if (selectedBus) {
       load();
     }
 
     const timer = setInterval(() => {
-      if (busNumber) load();
+      if (selectedBus) load();
     }, 7000);
 
     return () => {
       mounted = false;
       clearInterval(timer);
     };
-  }, [busNumber, notify]);
+  }, [selectedBus, notify]);
 
   const mapCenter = liveBus?.current_location ?? route?.polyline.points[0] ?? { lat: 28.989, lng: 77.02 };
   const routePath = route?.polyline.points ?? [];
@@ -180,13 +191,15 @@ export function LiveTrackingScreen({
           <View style={[styles.titleCard, isCompact && styles.titleCardCompact]}>
             <Text style={[styles.title, isCompact && styles.titleCompact]} numberOfLines={1}>Live Tracking</Text>
             <Text style={styles.subtitle} numberOfLines={1}>
-              {isBusLoading
+              {busesLoading
                 ? 'Finding available buses...'
                 : isLoading
                   ? 'Loading live data...'
                   : busError
-                    ? 'No buses available right now'
-                    : `Tracking ${busNumber}`}
+                    ? 'Error loading bus'
+                    : selectedBus
+                      ? `Tracking ${selectedBus.busNumber}`
+                      : 'Select a bus'}
             </Text>
           </View>
 
@@ -204,6 +217,13 @@ export function LiveTrackingScreen({
       </View>
 
       <ScrollView contentContainerStyle={[styles.sheetContent, isCompact && styles.sheetContentCompact]}>
+        <BusSelector
+          buses={buses}
+          selectedBusNumber={selectedBus?.busNumber ?? null}
+          onSelectBus={setSelectedBus}
+          isLoading={busesLoading}
+        />
+
         {!!busError && <Text style={styles.errorText}>{busError}</Text>}
 
         <View style={[styles.etaCard, isCompact && styles.etaCardCompact]}>
