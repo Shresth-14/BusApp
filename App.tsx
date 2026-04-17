@@ -10,17 +10,29 @@ import {
 } from './src/screens';
 
 export default function App() {
-  const [tab, setTab] = useState<BottomTabKey>('live');
+  const [tab, setTab] = useState<BottomTabKey>('tickets');
   const [selectedRouteId, setSelectedRouteId] = useState('HRY-RTE-001');
+  const [previousTab, setPreviousTab] = useState<BottomTabKey>('tickets');
   const [plannerSource, setPlannerSource] = useState('Sonipat');
   const [plannerDestination, setPlannerDestination] = useState('Delhi');
+
+  const handleTabPress = (newTab: BottomTabKey) => {
+    setPreviousTab(tab);
+    setTab(newTab);
+  };
+
+  const handleGoBack = () => {
+    // Go back to trip planner
+    setPreviousTab(tab);
+    setTab('tickets');
+  };
 
   const renderScreen = () => {
     switch (tab) {
       case 'routes':
         return (
           <RouteDetailsScreen
-            onTabPress={setTab}
+            onTabPress={handleTabPress}
             routeId={selectedRouteId}
             onRouteSelect={(routeId) => {
               setSelectedRouteId(routeId);
@@ -30,27 +42,31 @@ export default function App() {
       case 'tickets':
         return (
           <TripPlannerScreen
-            onTabPress={setTab}
+            onTabPress={handleTabPress}
             initialSource={plannerSource}
             initialDestination={plannerDestination}
             onRouteSelect={(routeId, source, destination) => {
               setSelectedRouteId(routeId);
               setPlannerSource(source);
               setPlannerDestination(destination);
+              // Auto-navigate to live tracking
+              setPreviousTab('tickets');
+              setTab('live');
             }}
           />
         );
       case 'profile':
-        return <AlertsScreen onTabPress={setTab} />;
+        return <AlertsScreen onTabPress={handleTabPress} />;
       case 'live':
       default:
         return (
           <LiveTrackingScreen
-            onTabPress={setTab}
+            onTabPress={handleTabPress}
             routeId={selectedRouteId}
             onRouteSelect={(routeId) => {
               setSelectedRouteId(routeId);
             }}
+            onGoBack={handleGoBack}
           />
         );
     }
