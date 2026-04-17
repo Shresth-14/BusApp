@@ -5,8 +5,8 @@ import { AppFeedbackProvider } from './src/feedback/useAppFeedback';
 import {
   AlertsScreen,
   LiveTrackingScreen,
+  RecentTripsScreen,
   RouteDetailsScreen,
-  TripPlannerScreen,
 } from './src/screens';
 
 export default function App() {
@@ -57,14 +57,9 @@ export default function App() {
         );
       case 'tickets':
         return (
-          <TripPlannerScreen
+          <RecentTripsScreen
             onTabPress={handleTabPress}
-            initialSource="Sonipat"
-            initialDestination="Delhi"
-            onRouteSelect={(routeId) => {
-              setSelectedRouteId(routeId);
-              setTab('routes');
-            }}
+            onRouteSelect={handleSelectRoute}
           />
         );
       case 'profile':

@@ -112,6 +112,30 @@ export function RouteDetailsScreen({
     <ScreenShell>
       <View style={styles.panelWrap}>
         <ScrollView contentContainerStyle={[styles.panelContent, isCompact && styles.panelContentCompact]}>
+          <View style={styles.heroCard}>
+            <View style={styles.heroTopRow}>
+              <View style={styles.heroTextWrap}>
+                <Text style={styles.heroKicker}>HARYANAGO ROUTES</Text>
+                <Text style={styles.heroTitle}>Choose a route, then show the map</Text>
+                <Text style={styles.heroSubtitle}>Browse live routes in a cleaner, map-first flow.</Text>
+              </View>
+              <View style={styles.heroIconWrap}>
+                <AppIcon name="routes" size={20} color={appTheme.colors.primaryNavy} />
+              </View>
+            </View>
+
+            <View style={styles.heroStatsRow}>
+              <View style={styles.heroStat}>
+                <Text style={styles.heroStatLabel}>Routes</Text>
+                <Text style={styles.heroStatValue}>{allRoutes.length || '--'}</Text>
+              </View>
+              <View style={styles.heroStat}>
+                <Text style={styles.heroStatLabel}>Focus</Text>
+                <Text style={styles.heroStatValue}>Map first</Text>
+              </View>
+            </View>
+          </View>
+
           <View style={styles.topActions}>
             <Pressable style={styles.backBtn} onPress={() => onTabPress?.('tickets')}>
               <AppIcon name="back" size={20} color={appTheme.colors.primaryNavy} />
@@ -288,6 +312,76 @@ const styles = StyleSheet.create({
   panelContentCompact: {
     paddingHorizontal: appTheme.spacing.md,
     paddingTop: appTheme.spacing.md,
+  },
+  heroCard: {
+    borderWidth: 1,
+    borderColor: '#CFE3D8',
+    backgroundColor: '#EEF8F2',
+    borderRadius: 20,
+    padding: 14,
+    marginBottom: 12,
+    ...appTheme.elevation.card,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  heroTextWrap: {
+    flex: 1,
+  },
+  heroKicker: {
+    color: appTheme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  heroTitle: {
+    marginTop: 3,
+    color: appTheme.colors.primaryNavy,
+    fontSize: 19,
+    fontWeight: '800',
+  },
+  heroSubtitle: {
+    marginTop: 4,
+    color: appTheme.colors.textMuted,
+    fontSize: 13,
+  },
+  heroIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: appTheme.colors.borderSubtle,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroStatsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  heroStat: {
+    flex: 1,
+    borderRadius: 14,
+    backgroundColor: '#fff',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#DCE8E1',
+  },
+  heroStatLabel: {
+    color: appTheme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  heroStatValue: {
+    marginTop: 3,
+    color: appTheme.colors.primaryNavy,
+    fontSize: 13,
+    fontWeight: '800',
   },
   routeSwitchCard: {
     borderWidth: 1,
