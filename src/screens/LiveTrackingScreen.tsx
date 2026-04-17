@@ -1,100 +1,88 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, SafeAreaView, Dimensions } from 'react-native';
 import { BottomTabKey } from '../types/ui';
 import { appTheme } from '../theme';
-import { AppButton, AppIcon, BottomNav, ScreenShell } from '../components/primitives';
-import { LeafletMapCard, BusSelector } from '../components/sections';
+import { AppIcon } from '../components/primitives';
+import { LeafletMapCard } from '../components/sections';
 import { useAppFeedback } from '../feedback/useAppFeedback';
-import { useDeviceClass } from '../utils/device';
 import { getAllRoutes, getLiveBus, getRouteDetails } from '../api/haryanaApi';
 import { BackendLiveBus, BackendRouteDetails } from '../types/backend';
-import type { BusItem } from '../components/sections/BusSelector';
 
 type LiveTrackingScreenProps = {
   onTabPress?: (tab: BottomTabKey) => void;
   routeId?: string;
   onRouteSelect?: (routeId: string) => void;
+  onGoBack?: () => void;
 };
 
 export function LiveTrackingScreen({
   onTabPress,
   routeId,
   onRouteSelect,
+  onGoBack,
 }: LiveTrackingScreenProps) {
   const { notify } = useAppFeedback();
-  const { height, isCompact, isPlusMax, isSE } = useDeviceClass();
-  const [buses, setBuses] = useState<BusItem[]>([]);
-  const [selectedBus, setSelectedBus] = useState<BusItem | null>(null);
-  const [busesLoading, setBusesLoading] = useState(true);
+  const [busNumber, setBusNumber] = useState<string | null>(null);
   const [liveBus, setLiveBus] = useState<BackendLiveBus | null>(null);
   const [route, setRoute] = useState<BackendRouteDetails | null>(null);
+  const [isBusLoading, setIsBusLoading] = useState(true);
   const [busError, setBusError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const mapRatio = isSE ? 0.39 : isCompact ? 0.42 : isPlusMax ? 0.49 : 0.46;
-  const mapHeight = Math.max(236, Math.min(440, Math.round(height * mapRatio)));
 
-  // Fetch all buses from all routes
   useEffect(() => {
     let mounted = true;
 
-    const loadAllBuses = async () => {
+    const resolveBusNumber = async () => {
       try {
-        setBusesLoading(true);
+        setIsBusLoading(true);
         setBusError(null);
 
         const routes = await getAllRoutes();
         if (!mounted) return;
 
-        // Flatten all buses from all routes
-        const allBuses: BusItem[] = [];
-        routes.forEach((route) => {
-          route.buses?.forEach((bus) => {
-            allBuses.push({
-              busNumber: bus.busNumber,
-              routeName: route.route_name,
-              from: route.stops?.[0] || 'Start',
-              to: route.stops?.[route.stops.length - 1] || 'End',
-            });
-          });
-        });
+        if (!routes.length) {
+          setBusNumber(null);
+          setBusError('No buses available.');
+          return;
+        }
 
-        if (!mounted) return;
-        setBuses(allBuses);
+        const preferredRoute = routeId ? routes.find((r) => r.route_id === routeId) : routes[0];
+        const firstRouteWithBus = routes.find((r) => r.buses?.length);
+        const selectedRoute = preferredRoute?.buses?.length ? preferredRoute : firstRouteWithBus;
+        const resolvedBus = selectedRoute?.buses?.[0]?.busNumber;
 
-        if (!selectedBus && allBuses.length > 0) {
-          // Auto-select first bus or bus on preferred route
-          let initialBus = allBuses[0];
-          if (routeId) {
-            const preferredBus = allBuses.find((b) => {
-              const routeForBus = routes.find((r) => r.route_id === routeId);
-              return routeForBus?.buses?.some((rb) => rb.busNumber === b.busNumber);
-            });
-            if (preferredBus) initialBus = preferredBus;
-          }
-          setSelectedBus(initialBus);
+        if (!resolvedBus) {
+          setBusNumber(null);
+          setBusError('No buses available.');
+          return;
+        }
+
+        setBusNumber(resolvedBus);
+        if (selectedRoute?.route_id) {
+          onRouteSelect?.(selectedRoute.route_id);
         }
       } catch (error) {
         if (!mounted) return;
-        const message = error instanceof Error ? error.message : 'Unable to load buses.';
+        const message = error instanceof Error ? error.message : 'Unable to load routes.';
+        setBusNumber(null);
         setBusError(message);
       } finally {
-        if (mounted) setBusesLoading(false);
+        if (mounted) setIsBusLoading(false);
       }
     };
 
-    loadAllBuses();
+    resolveBusNumber();
 
     return () => {
       mounted = false;
     };
-  }, [routeId]);
+  }, [routeId, onRouteSelect]);
 
-  // Fetch live bus data when selected bus changes
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
-      if (!selectedBus) {
+      if (!busNumber) {
         if (mounted) {
           setLiveBus(null);
           setRoute(null);
@@ -105,8 +93,7 @@ export function LiveTrackingScreen({
 
       try {
         setIsLoading(true);
-        setBusError(null);
-        const live = await getLiveBus(selectedBus.busNumber);
+        const live = await getLiveBus(busNumber);
         if (!mounted) return;
         setLiveBus(live);
 
@@ -125,19 +112,19 @@ export function LiveTrackingScreen({
       }
     };
 
-    if (selectedBus) {
+    if (busNumber) {
       load();
     }
 
     const timer = setInterval(() => {
-      if (selectedBus) load();
-    }, 7000);
+      if (busNumber) load();
+    }, 5000);
 
     return () => {
       mounted = false;
       clearInterval(timer);
     };
-  }, [selectedBus, notify]);
+  }, [busNumber, notify]);
 
   const mapCenter = liveBus?.current_location ?? route?.polyline.points[0] ?? { lat: 28.989, lng: 77.02 };
   const routePath = route?.polyline.points ?? [];
@@ -164,287 +151,218 @@ export function LiveTrackingScreen({
     return [...stopMarkers, ...busMarker];
   }, [route, liveBus]);
 
-  const upcomingStops = useMemo(() => {
-    if (!route || !liveBus) return [];
-    const nextIdx = Math.max(0, route.stops.findIndex((s) => s.stop_id === liveBus.next_stop_id));
-
-    return route.stops.slice(nextIdx, nextIdx + 3).map((stop, idx) => ({
-      stop: `${stop.name} / ${stop.city}`,
-      eta: `${liveBus.eta_to_next_stop + idx * 6} min`,
-    }));
-  }, [route, liveBus]);
+  const mapHeight = Dimensions.get('window').height;
 
   return (
-    <ScreenShell>
-      <View style={[styles.mapWrap, isCompact && styles.mapWrapCompact]}>
+    <SafeAreaView style={styles.container}>
+      {/* Full-screen map */}
+      <View style={styles.mapContainer}>
         <LeafletMapCard
-          height={mapHeight}
+          height={Math.round(mapHeight)}
           rounded={false}
           animateBus={false}
           center={mapCenter}
-          zoom={12}
+          zoom={13}
           markers={markers}
           routePath={routePath}
         />
-
-        <View style={[styles.topRow, isCompact && styles.topRowCompact]}>
-          <View style={[styles.titleCard, isCompact && styles.titleCardCompact]}>
-            <Text style={[styles.title, isCompact && styles.titleCompact]} numberOfLines={1}>Live Tracking</Text>
-            <Text style={styles.subtitle} numberOfLines={1}>
-              {busesLoading
-                ? 'Finding available buses...'
-                : isLoading
-                  ? 'Loading live data...'
-                  : busError
-                    ? 'Error loading bus'
-                    : selectedBus
-                      ? `Tracking ${selectedBus.busNumber}`
-                      : 'Select a bus'}
-            </Text>
-          </View>
-
-          <Pressable
-            style={styles.iconBtn}
-            onPress={() =>
-              notify('No new service alerts in your area.', {
-                analyticsEvent: 'live_notifications_opened',
-              })
-            }
-          >
-            <AppIcon name="bell" size={18} color={appTheme.colors.primaryNavy} />
-          </Pressable>
-        </View>
       </View>
 
-      <ScrollView contentContainerStyle={[styles.sheetContent, isCompact && styles.sheetContentCompact]}>
-        <BusSelector
-          buses={buses}
-          selectedBusNumber={selectedBus?.busNumber ?? null}
-          onSelectBus={setSelectedBus}
-          isLoading={busesLoading}
-        />
+      {/* Back button - top left */}
+      <Pressable style={styles.backBtn} onPress={onGoBack}>
+        <AppIcon name="back" size={24} color={appTheme.colors.primaryNavy} />
+      </Pressable>
 
-        {!!busError && <Text style={styles.errorText}>{busError}</Text>}
-
-        <View style={[styles.etaCard, isCompact && styles.etaCardCompact]}>
-          <View>
-            <Text style={[styles.route, isCompact && styles.routeCompact]}>{liveBus?.route_id || 'Route --'}</Text>
-            <Text style={styles.routeSub}>{liveBus?.route_name || 'No active bus selected'}</Text>
+      {/* Floating info card - bottom */}
+      {liveBus && (
+        <View style={styles.infoCard}>
+          <View style={styles.infoHeader}>
+            <View>
+              <Text style={styles.busNumber}>{busNumber}</Text>
+              <Text style={styles.routeInfo}>
+                {liveBus.route_name}
+              </Text>
+            </View>
+            <View style={styles.etaContainer}>
+              <Text style={styles.etaLabel}>ETA</Text>
+              <Text style={styles.eta}>{liveBus.eta_to_next_stop}m</Text>
+            </View>
           </View>
-          <Text style={[styles.eta, isCompact && styles.etaCompact]}>
-            ETA {liveBus?.eta_to_next_stop ?? '--'} min
-          </Text>
-        </View>
-
-        <View style={styles.stopRow}>
-          <Text style={styles.stopTitle}>Next Stops / अगले स्टॉप</Text>
-          <Text style={styles.liveBadge}>LIVE</Text>
-        </View>
-
-        {upcomingStops.map((item) => (
-          <View key={item.stop} style={styles.stopItem}>
-            <View style={styles.stopBullet} />
-            <Text style={styles.stopItemText} numberOfLines={1}>{item.stop}</Text>
-            <Text style={styles.stopEta}>{item.eta}</Text>
+          
+          <View style={styles.infoFooter}>
+            <View style={styles.nextStopContainer}>
+              <Text style={styles.nextStopLabel}>Next Stop</Text>
+              <Text style={styles.nextStop} numberOfLines={1}>
+                {liveBus.next_stop?.name || 'Coming soon'}
+              </Text>
+            </View>
+            <Pressable style={styles.expandBtn} onPress={() => onTabPress?.('routes')}>
+              <AppIcon name="share" size={18} color={appTheme.colors.primaryNavy} />
+            </Pressable>
           </View>
-        ))}
-
-        {!upcomingStops.length && <Text style={styles.routeSub}>No upcoming stops yet.</Text>}
-
-        <View style={[styles.actionRow, isCompact && styles.actionRowCompact]}>
-          <AppButton
-            title="Set Alert / अलर्ट सेट करें"
-            variant="secondary"
-            style={styles.actionBtn}
-            onPress={() =>
-              notify('Arrival alert set for Route HR-41A.', {
-                analyticsEvent: 'live_arrival_alert_set',
-              })
-            }
-          />
-          <AppButton
-            title="View Stop / स्टॉप देखें"
-            style={styles.actionBtn}
-            onPress={() => {
-              if (liveBus?.route_id) onRouteSelect?.(liveBus.route_id);
-              onTabPress?.('routes');
-            }}
-          />
         </View>
-      </ScrollView>
+      )}
 
-      <BottomNav activeTab="live" onTabPress={onTabPress} />
-    </ScreenShell>
+      {/* Loading state */}
+      {!liveBus && busError && (
+        <View style={styles.errorCard}>
+          <Text style={styles.errorText}>{busError}</Text>
+        </View>
+      )}
+
+      {/* Loading indicator */}
+      {isBusLoading && !liveBus && (
+        <View style={styles.loadingCard}>
+          <Text style={styles.loadingText}>Finding buses...</Text>
+        </View>
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  mapWrap: {
-    overflow: 'hidden',
-    borderBottomLeftRadius: 26,
-    borderBottomRightRadius: 26,
-  },
-  mapWrapCompact: {
-    borderBottomLeftRadius: 22,
-    borderBottomRightRadius: 22,
-  },
-  topRow: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    right: 12,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  topRowCompact: {
-    left: 8,
-    right: 8,
-    top: 8,
-  },
-  titleCard: {
+  container: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.82)',
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.34)',
+    backgroundColor: '#fff',
   },
-  titleCardCompact: {
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+  mapContainer: {
+    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
-  iconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.94)',
+  backBtn: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 100,
     borderWidth: 1,
-    borderColor: appTheme.colors.borderSubtle,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  infoCard: {
+    position: 'absolute',
+    bottom: 20,
+    left: 16,
+    right: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  infoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  busNumber: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: appTheme.colors.primaryNavy,
+    marginBottom: 4,
+  },
+  routeInfo: {
+    fontSize: 13,
+    color: appTheme.colors.textMuted,
+    fontWeight: '500',
+  },
+  etaContainer: {
+    alignItems: 'flex-end',
+  },
+  etaLabel: {
+    fontSize: 11,
+    color: appTheme.colors.textMuted,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  eta: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: appTheme.colors.statusOnline,
+  },
+  infoFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    paddingTop: 12,
+  },
+  nextStopContainer: {
+    flex: 1,
+  },
+  nextStopLabel: {
+    fontSize: 11,
+    color: appTheme.colors.textMuted,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  nextStop: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: appTheme.colors.primaryNavy,
+  },
+  expandBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#f5f5f5',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: {
-    color: appTheme.colors.primaryNavy,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  titleCompact: {
-    fontSize: 14,
-  },
-  subtitle: {
-    color: appTheme.colors.textMuted,
-    fontSize: 12,
-    marginTop: 1,
-  },
-  sheetContent: {
-    marginTop: -10,
-    backgroundColor: appTheme.colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: appTheme.spacing.lg,
-    paddingTop: appTheme.spacing.lg,
-    paddingBottom: appTheme.spacing.xl,
-    gap: appTheme.spacing.md,
-  },
-  sheetContentCompact: {
-    paddingHorizontal: appTheme.spacing.md,
-    paddingTop: appTheme.spacing.md,
-  },
-  etaCard: {
-    borderRadius: appTheme.radii.lg,
-    backgroundColor: '#F1F8F1',
-    padding: appTheme.spacing.md,
-    borderWidth: 1,
-    borderColor: '#D4E8D5',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  etaCardCompact: {
-    padding: appTheme.spacing.sm,
-  },
-  route: {
-    color: appTheme.colors.primaryNavy,
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  routeCompact: {
-    fontSize: 15,
-  },
-  routeSub: {
-    color: appTheme.colors.textMuted,
-    fontSize: 13,
-    marginTop: 2,
+  errorCard: {
+    position: 'absolute',
+    bottom: 20,
+    left: 16,
+    right: 16,
+    backgroundColor: appTheme.colors.errorRed,
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   errorText: {
-    color: appTheme.colors.errorRed,
     fontSize: 13,
+    color: '#fff',
     fontWeight: '500',
   },
-  eta: {
-    color: '#2E7D32',
-    fontSize: 20,
-    fontWeight: '700',
+  loadingCard: {
+    position: 'absolute',
+    bottom: 20,
+    left: 16,
+    right: 16,
+    backgroundColor: appTheme.colors.accentTeal,
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  etaCompact: {
-    fontSize: 17,
-  },
-  stopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  stopTitle: {
+  loadingText: {
+    fontSize: 13,
     color: appTheme.colors.primaryNavy,
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  liveBadge: {
-    backgroundColor: '#DFF4E0',
-    color: '#2E7D32',
-    fontSize: 11,
-    fontWeight: '700',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    overflow: 'hidden',
-  },
-  stopItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E8E8E8',
-    minHeight: 48,
-    gap: 8,
-  },
-  stopBullet: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: appTheme.colors.primaryNavy,
-  },
-  stopItemText: {
-    flex: 1,
-    color: appTheme.colors.textCharcoal,
-    fontSize: 14,
-  },
-  stopEta: {
-    color: appTheme.colors.primaryNavy,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 2,
-  },
-  actionRowCompact: {
-    flexDirection: 'column',
-  },
-  actionBtn: {
-    flex: 1,
+    fontWeight: '500',
   },
 });
