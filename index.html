@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HaryanaGo UI Prototype</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="project-header">
+      <div>
+        <p class="eyebrow">Smart Bus Tracker</p>
+        <h1>HaryanaGo</h1>
+      </div>
+      <p class="subtitle">
+        High-fidelity civic utility UI for Haryana Roadways commuters
+      </p>
+    </header>
+
+    <main class="screen-grid">
+      <section class="phone" aria-label="Live map and nearby buses">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="status-icons">LTE 78%</span>
+        </div>
+
+        <div class="app-header">
+          <div>
+            <p class="location-label">You are near</p>
+            <h2>Murthal Chowk, Sonipat</h2>
+          </div>
+          <button class="icon-btn" aria-label="Notifications">○</button>
+        </div>
+
+        <div class="map-card">
+          <div class="route-pill">Route 401A • Live</div>
+          <div class="map-grid"></div>
+          <div class="bus-marker marker-a">
+            <span class="pulse"></span>
+            <span class="bus-dot"></span>
+          </div>
+          <div class="bus-marker marker-b">
+            <span class="pulse"></span>
+            <span class="bus-dot"></span>
+          </div>
+          <div class="stop-tag stop-a">Rishihood Gate</div>
+          <div class="stop-tag stop-b">Sonipat Bus Stand</div>
+        </div>
+
+        <div class="hero-eta">
+          <p>Next Bus ETA</p>
+          <h3>07 min</h3>
+          <span>Haryana Roadways 401A to Delhi ISBT</span>
+        </div>
+
+        <article class="card bus-card">
+          <div class="card-row">
+            <div>
+              <p class="muted">Current Occupancy</p>
+              <h4>Moderate Crowd</h4>
+            </div>
+            <span class="badge badge-orange">62% full</span>
+          </div>
+          <div class="progress-track" aria-hidden="true">
+            <span class="progress-fill progress-orange"></span>
+          </div>
+          <p class="muted small">Updated 30s ago from live ticketing feed</p>
+        </article>
+
+        <nav class="bottom-nav" aria-label="Main navigation">
+          <button class="active">Live</button>
+          <button>Routes</button>
+          <button>Tickets</button>
+          <button>Profile</button>
+        </nav>
+      </section>
+
+      <section class="phone" aria-label="Route details and timetable">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="status-icons">LTE 78%</span>
+        </div>
+
+        <div class="app-header">
+          <button class="icon-btn" aria-label="Back">←</button>
+          <h2>Route 401A Details</h2>
+          <button class="icon-btn" aria-label="Share">↗</button>
+        </div>
+
+        <article class="card">
+          <div class="card-row">
+            <div>
+              <p class="muted">Line</p>
+              <h4>Sonipat Bus Stand → Delhi ISBT</h4>
+            </div>
+            <span class="badge badge-green">On Time</span>
+          </div>
+          <div class="chip-row">
+            <span class="chip">Express</span>
+            <span class="chip">AC</span>
+            <span class="chip">13 Stops</span>
+          </div>
+        </article>
+
+        <article class="card timeline-card">
+          <h4>Upcoming Stops</h4>
+          <ul class="timeline">
+            <li class="active-stop">
+              <span class="dot"></span>
+              <div>
+                <strong>Rishihood University Gate</strong>
+                <p>Arriving in 7 min</p>
+              </div>
+            </li>
+            <li>
+              <span class="dot"></span>
+              <div>
+                <strong>Murthal Chowk</strong>
+                <p>Arriving in 11 min</p>
+              </div>
+            </li>
+            <li>
+              <span class="dot"></span>
+              <div>
+                <strong>Kundli Border</strong>
+                <p>Arriving in 19 min</p>
+              </div>
+            </li>
+            <li>
+              <span class="dot"></span>
+              <div>
+                <strong>Delhi ISBT Kashmere Gate</strong>
+                <p>Arriving in 36 min</p>
+              </div>
+            </li>
+          </ul>
+        </article>
+
+        <article class="card timetable-card">
+          <h4>Today's Frequency</h4>
+          <div class="table-row">
+            <span>Peak (8:00 - 11:00)</span>
+            <strong>Every 9 min</strong>
+          </div>
+          <div class="table-row">
+            <span>Midday (11:00 - 16:00)</span>
+            <strong>Every 14 min</strong>
+          </div>
+          <div class="table-row">
+            <span>Evening (16:00 - 20:00)</span>
+            <strong>Every 8 min</strong>
+          </div>
+        </article>
+      </section>
+
+      <section class="phone" aria-label="Alerts and service status">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="status-icons">LTE 78%</span>
+        </div>
+
+        <div class="app-header">
+          <div>
+            <p class="location-label">Service Feed</p>
+            <h2>Alerts & Reliability</h2>
+          </div>
+          <button class="icon-btn" aria-label="Refresh">⟳</button>
+        </div>
+
+        <article class="alert-strip warning">
+          <strong>Moderate Delay</strong>
+          <p>Route 501 delayed 12 min due to NH44 congestion near Kundli.</p>
+        </article>
+
+        <article class="card metric-card">
+          <div>
+            <p class="muted">Network Reliability Today</p>
+            <h3>91%</h3>
+          </div>
+          <div class="sparkline" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </article>
+
+        <article class="card alert-list">
+          <h4>Recent Notifications</h4>
+          <div class="alert-item">
+            <span class="status-dot green"></span>
+            <div>
+              <strong>Route 401A resumed normal speed</strong>
+              <p>2 min ago</p>
+            </div>
+          </div>
+          <div class="alert-item">
+            <span class="status-dot orange"></span>
+            <div>
+              <strong>Higher crowd expected at Sonipat Stand</strong>
+              <p>8 min ago</p>
+            </div>
+          </div>
+          <div class="alert-item">
+            <span class="status-dot red"></span>
+            <div>
+              <strong>Route 702 canceled (technical issue)</strong>
+              <p>19 min ago</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="card cta-card">
+          <h4>Need an alternate route?</h4>
+          <p class="muted">We'll suggest the fastest nearby line with lower crowd.</p>
+          <button class="primary-btn">Find Alternative</button>
+        </article>
+      </section>
+
+      <section class="phone" aria-label="Trip planner and ticket quick action">
+        <div class="status-bar">
+          <span>9:41</span>
+          <span class="status-icons">LTE 78%</span>
+        </div>
+
+        <div class="app-header">
+          <div>
+            <p class="location-label">Plan a commute</p>
+            <h2>Trip Planner</h2>
+          </div>
+          <button class="icon-btn" aria-label="Calendar">⌂</button>
+        </div>
+
+        <article class="card planner-card">
+          <label>
+            From
+            <input value="Rishihood University" aria-label="From" />
+          </label>
+          <label>
+            To
+            <input value="Sonipat Railway Station" aria-label="To" />
+          </label>
+          <div class="planner-actions">
+            <button class="secondary-btn">Leave Now</button>
+            <button class="primary-btn">Search Buses</button>
+          </div>
+        </article>
+
+        <article class="card recommendation-card">
+          <div class="card-row">
+            <div>
+              <p class="muted">Best Option</p>
+              <h4>Route 316 + 401A</h4>
+            </div>
+            <span class="badge badge-green">31 min</span>
+          </div>
+          <p class="muted">
+            Walk 300m to Murthal Turn. Transfer at Sonipat Stand. Expected crowd low.
+          </p>
+        </article>
+
+        <article class="card recommendation-card">
+          <div class="card-row">
+            <div>
+              <p class="muted">Alternative</p>
+              <h4>Direct Route 221</h4>
+            </div>
+            <span class="badge badge-orange">43 min</span>
+          </div>
+          <p class="muted">No transfer. Next bus in 18 min. Occupancy currently high.</p>
+        </article>
+
+        <article class="card pay-card">
+          <h4>Quick Ticket</h4>
+          <p class="muted">Save time by pre-booking your Haryana Roadways pass.</p>
+          <button class="primary-btn full">Buy Daily Pass - Rs 38</button>
+        </article>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "haryanago-backend",
+  "version": "1.0.0",
+  "description": "Haryana Roadways backend APIs for routes, stops, and live bus tracking",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "seed": "node src/seed/seedDatabase.js"
+  },
+  "dependencies": {
+    "@mapbox/polyline": "^1.2.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "mongoose": "^8.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
