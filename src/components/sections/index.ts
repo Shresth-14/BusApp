@@ -6,4 +6,8 @@ export * from './LeafletMapCard';
 export * from './LiveMapPreview';
 export * from './PlannerFormCard';
 export * from './RecommendationCard';
+export * from './BusBadge';
+export * from './StopCard';
+export * from './StopsHeader';
+export * from './StopsSearchBar';
 export * from './StopsTimelineCard';

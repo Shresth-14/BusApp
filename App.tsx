@@ -50,7 +50,7 @@ export default function App() {
         return (
           <RouteDetailsScreen
             onTabPress={handleTabPress}
-            routeId={selectedRouteId || 'HRY-RTE-001'}
+            routeId={selectedRouteId || undefined}
             onRouteSelect={handleSelectRoute}
             onShowMap={handleShowMap}
           />
@@ -68,7 +68,7 @@ export default function App() {
         return (
           <RouteDetailsScreen
             onTabPress={handleTabPress}
-            routeId={selectedRouteId || 'HRY-RTE-001'}
+            routeId={selectedRouteId || undefined}
             onRouteSelect={handleSelectRoute}
             onShowMap={handleShowMap}
           />

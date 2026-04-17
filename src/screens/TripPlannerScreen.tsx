@@ -142,6 +142,7 @@ export function TripPlannerScreen({
 
   return (
     <ScreenShell>
+      <View style={styles.pageWrap}>
       <View style={[styles.headerWrap, isCompact && styles.headerWrapCompact]}>
         <View style={styles.headerSurface}>
           <View style={styles.headerTopRow}>
@@ -383,6 +384,7 @@ export function TripPlannerScreen({
           </View>
         </Card>
       </ScrollView>
+      </View>
 
       <BottomNav activeTab="tickets" onTabPress={onTabPress} />
     </ScreenShell>
@@ -390,6 +392,10 @@ export function TripPlannerScreen({
 }
 
 const styles = StyleSheet.create({
+  pageWrap: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+  },
   headerWrap: {
     paddingHorizontal: appTheme.spacing.md,
     paddingTop: 8,
@@ -400,10 +406,10 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   headerSurface: {
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#CFE3D8',
-    backgroundColor: '#EEF8F2',
+    borderColor: '#DCE6EF',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
     paddingVertical: 12,
     ...appTheme.elevation.card,
@@ -419,7 +425,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   headerKicker: {
-    color: '#2D7A57',
+    color: '#0F8B8D',
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.9,
@@ -446,7 +452,7 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#CFE3D8',
+    borderColor: '#DCE6EF',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -459,7 +465,7 @@ const styles = StyleSheet.create({
   },
   metaPill: {
     borderRadius: 999,
-    backgroundColor: '#2D7A57',
+    backgroundColor: '#0F8B8D',
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
@@ -471,22 +477,26 @@ const styles = StyleSheet.create({
   metaPillSoft: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#BCD7CB',
-    backgroundColor: '#F7FCF9',
+    borderColor: '#DCE6EF',
+    backgroundColor: '#F6FAFE',
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   metaPillSoftText: {
-    color: '#2D7A57',
+    color: '#0F8B8D',
     fontSize: 11,
     fontWeight: '700',
   },
   content: {
     padding: appTheme.spacing.md,
     gap: appTheme.spacing.md,
+    paddingBottom: 96,
   },
   searchCard: {
     gap: appTheme.spacing.sm,
+    borderWidth: 1,
+    borderColor: '#DCE6EF',
+    borderRadius: 16,
   },
   searchLabel: {
     ...appTheme.typography.caption,
@@ -528,10 +538,14 @@ const styles = StyleSheet.create({
     flexBasis: '48%',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: appTheme.colors.borderSubtle,
     backgroundColor: '#FFFFFF',
     padding: 12,
-    ...appTheme.elevation.card,
+    borderColor: '#DCE6EF',
+    shadowColor: '#10213A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
   quickItemCompact: {
     flexBasis: '100%',
@@ -547,7 +561,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   quickSub: {
-    color: '#2E7D32',
+    color: '#0F8B8D',
     fontSize: 11,
     marginTop: 6,
     fontWeight: '600',
@@ -555,10 +569,16 @@ const styles = StyleSheet.create({
   ctaCard: {
     gap: 8,
     marginBottom: 4,
+    borderWidth: 1,
+    borderColor: '#DCE6EF',
+    borderRadius: 16,
   },
   routesCard: {
     gap: 8,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#DCE6EF',
+    borderRadius: 16,
   },
   routesHeadRow: {
     flexDirection: 'row',
@@ -568,8 +588,8 @@ const styles = StyleSheet.create({
   routesCount: {
     minWidth: 28,
     textAlign: 'center',
-    backgroundColor: '#E6F4EE',
-    color: '#2C7D5B',
+    backgroundColor: '#EAF8F8',
+    color: '#0F8B8D',
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -583,7 +603,7 @@ const styles = StyleSheet.create({
   },
   routeListWrap: {
     borderTopWidth: 1,
-    borderTopColor: '#E2ECE8',
+    borderTopColor: '#E3EDF5',
     paddingTop: 8,
   },
   routeListScroll: {
@@ -592,7 +612,7 @@ const styles = StyleSheet.create({
   routeItem: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#D9E7E1',
+    borderColor: '#DCE6EF',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -604,7 +624,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   routeItemCode: {
-    color: '#2E7D32',
+    color: '#0F8B8D',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -625,7 +645,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   routeArrow: {
-    color: '#2C7D5B',
+    color: '#0F8B8D',
     fontSize: 12,
     fontWeight: '700',
   },

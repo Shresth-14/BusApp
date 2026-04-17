@@ -26,6 +26,7 @@ export function BottomNav({ activeTab, onTabPress }: BottomNavProps) {
   const { isCompact } = useDeviceClass();
 
   return (
+    <View style={[styles.navWrap, isCompact && styles.navWrapCompact]}>
     <View style={[styles.nav, isCompact && styles.navCompact]}>
       {tabs.map((tab) => {
         const isActive = tab.key === activeTab;
@@ -45,7 +46,7 @@ export function BottomNav({ activeTab, onTabPress }: BottomNavProps) {
             <AppIcon
               name={tabIcons[tab.key]}
               size={18}
-              color={isActive ? appTheme.colors.primaryNavy : appTheme.colors.textMuted}
+              color={isActive ? '#0F8B8D' : '#7A8795'}
             />
             <Text style={[styles.label, isCompact && styles.labelCompact, isActive && styles.labelActive]}>
               {tab.label}
@@ -54,34 +55,46 @@ export function BottomNav({ activeTab, onTabPress }: BottomNavProps) {
         );
       })}
     </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  navWrap: {
+    backgroundColor: '#F5F7FA',
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 10,
+  },
+  navWrapCompact: {
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
   nav: {
     flexDirection: 'row',
-    borderTopWidth: 1,
-    borderColor: appTheme.colors.borderSubtle,
-    paddingHorizontal: appTheme.spacing.sm,
-    paddingTop: appTheme.spacing.sm,
-    paddingBottom: appTheme.spacing.md,
-    backgroundColor: appTheme.colors.surface,
-    shadowColor: '#0D2B55',
-    shadowOffset: { width: 0, height: -2 },
+    borderWidth: 1,
+    borderColor: '#DCE6EF',
+    borderRadius: 18,
+    paddingHorizontal: 8,
+    paddingTop: 8,
+    paddingBottom: 10,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#10213A',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowRadius: 10,
     elevation: 3,
   },
   navCompact: {
-    paddingHorizontal: 4,
-    paddingBottom: 10,
+    paddingHorizontal: 6,
+    paddingBottom: 8,
   },
   item: {
     flex: 1,
-    borderRadius: 9,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: appTheme.spacing.sm,
+    paddingVertical: 8,
     gap: 3,
   },
   itemCompact: {
@@ -89,10 +102,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   itemActive: {
-    backgroundColor: 'rgba(165, 214, 167, 0.34)',
-    shadowColor: '#1B5E20',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
+    backgroundColor: '#EAF8F8',
+    borderWidth: 1,
+    borderColor: '#CFEAEB',
+    shadowColor: '#0F8B8D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
     shadowRadius: 6,
     elevation: 2,
   },
@@ -102,13 +117,13 @@ const styles = StyleSheet.create({
   label: {
     ...appTheme.typography.caption,
     fontWeight: '600',
-    color: appTheme.colors.textMuted,
+    color: '#7A8795',
   },
   labelCompact: {
     fontSize: 11,
     lineHeight: 14,
   },
   labelActive: {
-    color: appTheme.colors.primaryNavy,
+    color: '#0F8B8D',
   },
 });

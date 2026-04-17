@@ -38,6 +38,7 @@ export function AlertsScreen({ onTabPress }: AlertsScreenProps) {
 
   return (
     <ScreenShell>
+      <View style={styles.pageWrap}>
       <View style={[styles.headerWrap, isCompact && styles.headerWrapCompact]}>
         <View style={styles.headerSurface}>
           <View style={styles.headerTopRow}>
@@ -237,6 +238,7 @@ export function AlertsScreen({ onTabPress }: AlertsScreenProps) {
           </Card>
         )}
       </ScrollView>
+      </View>
 
       <BottomNav activeTab="profile" onTabPress={onTabPress} />
     </ScreenShell>
@@ -244,6 +246,10 @@ export function AlertsScreen({ onTabPress }: AlertsScreenProps) {
 }
 
 const styles = StyleSheet.create({
+  pageWrap: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+  },
   headerWrap: {
     paddingHorizontal: appTheme.spacing.md,
     paddingTop: 8,
@@ -254,10 +260,10 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   headerSurface: {
-    borderRadius: 20,
+    borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#D4E6DC',
-    backgroundColor: '#F2FAF5',
+    borderColor: '#DCE6EF',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 14,
     paddingVertical: 12,
     ...appTheme.elevation.card,
@@ -273,7 +279,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   headerKicker: {
-    color: '#2E7D57',
+    color: '#0F8B8D',
     fontSize: 10,
     fontWeight: '500',
     letterSpacing: 0.9,
@@ -300,7 +306,7 @@ const styles = StyleSheet.create({
     height: 38,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#CCE1D6',
+    borderColor: '#DCE6EF',
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
@@ -313,7 +319,7 @@ const styles = StyleSheet.create({
   },
   metaPillStrong: {
     borderRadius: 999,
-    backgroundColor: '#2D7A57',
+    backgroundColor: '#0F8B8D',
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
@@ -325,28 +331,28 @@ const styles = StyleSheet.create({
   metaPillSoft: {
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#C2DCCF',
-    backgroundColor: '#F8FCF9',
+    borderColor: '#DCE6EF',
+    backgroundColor: '#F6FAFE',
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
   metaPillSoftText: {
-    color: '#2E7D57',
+    color: '#0F8B8D',
     fontSize: 11,
     fontWeight: '500',
   },
   content: {
     padding: appTheme.spacing.md,
     gap: appTheme.spacing.md,
-    paddingBottom: appTheme.spacing.lg + 20,
+    paddingBottom: 96,
   },
   
   /* Current Journey Card */
   currentJourneyCard: {
-    backgroundColor: 'linear-gradient(135deg, #E8F7EF 0%, #F2FAF5 100%)',
+    backgroundColor: '#F6FAFE',
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: '#C7E6D1',
+    borderColor: '#DCE6EF',
     overflow: 'hidden',
   },
   currentJourneyBadge: {
@@ -355,9 +361,9 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: appTheme.spacing.md,
     paddingVertical: 8,
-    backgroundColor: '#E7F4EC',
+    backgroundColor: '#EAF8F8',
     borderBottomWidth: 1,
-    borderBottomColor: '#D0E9DD',
+    borderBottomColor: '#DCE6EF',
   },
   liveIndicator: {
     width: 8,
@@ -366,7 +372,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#D32F2F',
   },
   currentJourneyLabel: {
-    color: '#2D7A57',
+    color: '#0F8B8D',
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -379,7 +385,7 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#D0E9DD',
+    borderBottomColor: '#E3EDF5',
   },
   currentRouteBlock: {
     flex: 1,
@@ -396,7 +402,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   currentFare: {
-    color: '#1F6F4E',
+    color: '#0F8B8D',
     fontSize: 22,
     fontWeight: '600',
   },
@@ -464,7 +470,7 @@ const styles = StyleSheet.create({
   journeyItem: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: '#DCE6EF',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -485,7 +491,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: '#2D7A57',
+    backgroundColor: '#0F8B8D',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -510,7 +516,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   journeyFare: {
-    color: '#1F6F4E',
+    color: '#0F8B8D',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -577,8 +583,8 @@ const styles = StyleSheet.create({
   statsCard: {
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#F8FCF9',
+    borderColor: '#DCE6EF',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 16,
   },
   statsGrid: {
@@ -604,6 +610,6 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 40,
-    backgroundColor: '#D0E9DD',
+    backgroundColor: '#DCE6EF',
   },
 });
