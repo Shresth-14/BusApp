@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BottomTabKey } from '../types/ui';
 import { appTheme } from '../theme';
-import { AppButton, AppIcon, BottomNav, Card, ScreenShell } from '../components/primitives';
+import { AppIcon, BottomNav, Card, ScreenShell } from '../components/primitives';
 import { useAppFeedback } from '../feedback/useAppFeedback';
 import { useDeviceClass } from '../utils/device';
-import { getJourneyHistory } from '../api/haryanaApi';
-import { BackendJourney } from '../types/backend';
+import { getAllRoutes } from '../api/haryanaApi';
+import { BackendRouteSummary } from '../types/backend';
 
 type RecentTripsScreenProps = {
   onTabPress?: (tab: BottomTabKey) => void;
@@ -16,40 +16,52 @@ type RecentTripsScreenProps = {
 export function RecentTripsScreen({ onTabPress, onRouteSelect }: RecentTripsScreenProps) {
   const { notify } = useAppFeedback();
   const { isCompact } = useDeviceClass();
-  const [journeys, setJourneys] = useState<BackendJourney[]>([]);
+  const [routes, setRoutes] = useState<BackendRouteSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
-    const loadJourneys = async () => {
+    const loadRoutes = async () => {
       try {
-        const history = await getJourneyHistory(8);
+        const data = await getAllRoutes();
         if (!mounted) return;
-        setJourneys(history);
+        setRoutes(data);
       } catch (error) {
         if (!mounted) return;
-        const message = error instanceof Error ? error.message : 'Unable to load journey history.';
+        const message = error instanceof Error ? error.message : 'Unable to load saved routes.';
         notify(message, {
-          analyticsEvent: 'journey_history_error',
+          analyticsEvent: 'saved_routes_error',
         });
       } finally {
         if (mounted) setIsLoading(false);
       }
     };
 
-    loadJourneys();
+    loadRoutes();
 
     return () => {
       mounted = false;
     };
   }, [notify]);
 
-  const completedTrips = journeys.filter((journey) => journey.status === 'completed');
-  const inProgressTrips = journeys.filter((journey) => journey.status === 'in-progress');
-  const avgFare = journeys.length
-    ? Math.round(journeys.reduce((sum, journey) => sum + journey.fare_inr, 0) / journeys.length)
-    : 0;
+  const favoriteRoutes = useMemo(() => {
+    return routes.slice(0, 4).map((route) => {
+      const [fromPart, toPart] = route.route_name.split('->').map((part) => part.trim());
+      return {
+        ...route,
+        from: fromPart || route.route_name,
+        to: toPart || 'Destination',
+        fareEstimate: Math.max(20, Math.round(route.distance_km * 4.5)),
+      };
+    });
+  }, [routes]);
+
+  const commuteStats = [
+    { label: 'Favorite routes', value: favoriteRoutes.length || '--' },
+    { label: 'Saved commute', value: 'Daily' },
+    { label: 'Avg fare', value: favoriteRoutes.length ? `₹${Math.round(favoriteRoutes.reduce((sum, item) => sum + item.fareEstimate, 0) / favoriteRoutes.length)}` : '--' },
+  ];
 
   return (
     <ScreenShell>
@@ -57,9 +69,9 @@ export function RecentTripsScreen({ onTabPress, onRouteSelect }: RecentTripsScre
         <View style={styles.headerSurface}>
           <View style={styles.headerTopRow}>
             <View style={styles.headerTextBlock}>
-              <Text style={styles.headerKicker}>HARYANAGO</Text>
-              <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>Recent Trips</Text>
-              <Text style={styles.headerSubtitle}>Your saved and recent journeys in one place</Text>
+              <Text style={styles.headerKicker}>SAVED COMMUTES</Text>
+              <Text style={[styles.headerTitle, isCompact && styles.headerTitleCompact]}>Saved Routes</Text>
+              <Text style={styles.headerSubtitle}>Quick access to the routes you use most often</Text>
             </View>
             <Pressable style={styles.headerHomeBtn} onPress={() => onTabPress?.('routes')}>
               <AppIcon name="routes" size={18} color={appTheme.colors.primaryNavy} />
@@ -67,94 +79,70 @@ export function RecentTripsScreen({ onTabPress, onRouteSelect }: RecentTripsScre
           </View>
 
           <View style={styles.headerStatsRow}>
-            <View style={styles.statPill}>
-              <Text style={styles.statPillLabel}>Trips</Text>
-              <Text style={styles.statPillValue}>{journeys.length}</Text>
-            </View>
-            <View style={styles.statPill}>
-              <Text style={styles.statPillLabel}>Active</Text>
-              <Text style={styles.statPillValue}>{inProgressTrips.length}</Text>
-            </View>
-            <View style={styles.statPill}>
-              <Text style={styles.statPillLabel}>Avg Fare</Text>
-              <Text style={styles.statPillValue}>₹{avgFare}</Text>
-            </View>
+            {commuteStats.map((stat) => (
+              <View key={stat.label} style={styles.statPill}>
+                <Text style={styles.statPillLabel}>{stat.label}</Text>
+                <Text style={styles.statPillValue}>{stat.value}</Text>
+              </View>
+            ))}
           </View>
         </View>
 
         <Card style={styles.heroCard}>
           <View style={styles.heroRow}>
             <View style={styles.heroTextWrap}>
-              <Text style={styles.heroTitle}>Pick up where you left off</Text>
-              <Text style={styles.heroSubtitle}>Tap any recent journey to open its route and map.</Text>
+              <Text style={styles.heroTitle}>One tap to your usual route</Text>
+              <Text style={styles.heroSubtitle}>Keep your common corridors ready before you search again.</Text>
             </View>
             <View style={styles.heroIconWrap}>
               <AppIcon name="tickets" size={20} color={appTheme.colors.primaryNavy} />
             </View>
           </View>
-          <AppButton
-            title="Browse Routes"
-            variant="secondary"
-            onPress={() => onTabPress?.('routes')}
-            style={styles.heroBtn}
-          />
+          <View style={styles.heroButtonsRow}>
+            <Pressable style={styles.heroActionBtn} onPress={() => onTabPress?.('routes')}>
+              <Text style={styles.heroActionBtnText}>Browse Routes</Text>
+            </Pressable>
+            <Pressable style={styles.heroActionBtnSoft} onPress={() => notify('Saved commute reminders enabled.', { analyticsEvent: 'saved_routes_reminders' })}>
+              <Text style={styles.heroActionBtnSoftText}>Enable reminders</Text>
+            </Pressable>
+          </View>
         </Card>
 
         <View style={styles.sectionHead}>
-          <Text style={styles.sectionTitle}>Recent activity</Text>
-          <Text style={styles.sectionMeta}>{isLoading ? 'Loading...' : `${completedTrips.length} completed`}</Text>
+          <Text style={styles.sectionTitle}>My saved routes</Text>
+          <Text style={styles.sectionMeta}>{isLoading ? 'Loading...' : `${routes.length} available`}</Text>
         </View>
 
-        {journeys.map((journey) => {
-          const statusLabel = journey.status === 'in-progress' ? 'Live trip' : journey.status === 'completed' ? 'Completed' : 'Cancelled';
-
-          return (
+        <View style={styles.routeGrid}>
+          {favoriteRoutes.map((route) => (
             <Pressable
-              key={journey.journey_id}
-              style={styles.tripCard}
+              key={route.route_id}
+              style={styles.routeCard}
               onPress={() => {
-                onRouteSelect?.(journey.route_id);
+                onRouteSelect?.(route.route_id);
                 onTabPress?.('routes');
               }}
             >
-              <View style={styles.tripTopRow}>
-                <View style={styles.tripTitleWrap}>
-                  <Text style={styles.tripRoute} numberOfLines={1}>{journey.route_name}</Text>
-                  <Text style={styles.tripMeta}>{journey.route_id} · Bus {journey.bus_id}</Text>
-                </View>
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusBadgeText}>{statusLabel}</Text>
-                </View>
+              <View style={styles.routeCardTop}>
+                <Text style={styles.routeName} numberOfLines={1}>{route.route_name}</Text>
+                <Text style={styles.routeTime}>{route.estimated_time_minutes} min</Text>
               </View>
-
-              <View style={styles.tripGrid}>
-                <View style={styles.tripMetric}>
-                  <Text style={styles.tripMetricLabel}>Duration</Text>
-                  <Text style={styles.tripMetricValue}>{journey.duration_minutes} min</Text>
-                </View>
-                <View style={styles.tripMetric}>
-                  <Text style={styles.tripMetricLabel}>Fare</Text>
-                  <Text style={styles.tripMetricValue}>₹{journey.fare_inr}</Text>
-                </View>
-                <View style={styles.tripMetric}>
-                  <Text style={styles.tripMetricLabel}>Payment</Text>
-                  <Text style={styles.tripMetricValue}>{journey.payment_mode}</Text>
-                </View>
+              <Text style={styles.routeId}>{route.route_id}</Text>
+              <Text style={styles.routePath} numberOfLines={1}>{route.from} → {route.to}</Text>
+              <View style={styles.routeFooter}>
+                <Text style={styles.routeFare}>Est. ₹{route.fareEstimate}</Text>
+                <Text style={styles.routeLink}>Open</Text>
               </View>
-
-              <Text style={styles.tripStops} numberOfLines={1}>
-                {journey.source_stop?.name || 'Start'} → {journey.destination_stop?.name || 'End'}
-              </Text>
             </Pressable>
-          );
-        })}
+          ))}
+        </View>
 
-        {!journeys.length && !isLoading && (
-          <Card style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No journeys yet</Text>
-            <Text style={styles.emptyText}>Your recent trips will appear here after you start riding.</Text>
-          </Card>
-        )}
+        <Card style={styles.tipCard}>
+          <Text style={styles.tipTitle}>Travel tip</Text>
+          <Text style={styles.tipText}>
+            Add the routes you use most often here. This page is now your quick-access commute hub, not a duplicate journey log.
+          </Text>
+        </Card>
       </ScrollView>
 
       <BottomNav activeTab="tickets" onTabPress={onTabPress} />
@@ -174,8 +162,8 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#CFE3D8',
-    backgroundColor: '#EEF8F2',
+    borderColor: '#D4E6DC',
+    backgroundColor: '#F2FAF5',
     paddingHorizontal: 14,
     paddingVertical: 12,
     ...appTheme.elevation.card,
@@ -188,50 +176,56 @@ const styles = StyleSheet.create({
   },
   headerTextBlock: {
     flex: 1,
+    minWidth: 0,
   },
   headerKicker: {
-    color: appTheme.colors.textMuted,
-    fontSize: 11,
+    color: '#2E7D57',
+    fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0.9,
   },
   headerTitle: {
     marginTop: 2,
     color: appTheme.colors.primaryNavy,
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 22,
+    lineHeight: 26,
+    fontWeight: '700',
   },
   headerTitleCompact: {
-    fontSize: 21,
+    fontSize: 19,
+    lineHeight: 23,
   },
   headerSubtitle: {
-    marginTop: 3,
+    marginTop: 2,
     color: appTheme.colors.textMuted,
     fontSize: 13,
+    fontWeight: '500',
   },
   headerHomeBtn: {
     width: 38,
     height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CCE1D6',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: appTheme.colors.borderSubtle,
   },
   headerStatsRow: {
+    marginTop: 10,
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
-    marginTop: 12,
   },
   statPill: {
-    flex: 1,
+    flexGrow: 1,
     borderRadius: 14,
     backgroundColor: '#fff',
     paddingVertical: 10,
     paddingHorizontal: 10,
     borderWidth: 1,
     borderColor: '#D9E8E0',
+    minWidth: 96,
   },
   statPillLabel: {
     color: appTheme.colors.textMuted,
@@ -278,8 +272,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroBtn: {
+  heroButtonsRow: {
     marginTop: 12,
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  heroActionBtn: {
+    flex: 1,
+    minWidth: 140,
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: appTheme.colors.primaryNavy,
+  },
+  heroActionBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  heroActionBtnSoft: {
+    flex: 1,
+    minWidth: 140,
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EEF8F2',
+    borderWidth: 1,
+    borderColor: '#D8E9DE',
+  },
+  heroActionBtnSoftText: {
+    color: appTheme.colors.primaryNavy,
+    fontSize: 13,
+    fontWeight: '700',
   },
   sectionHead: {
     marginHorizontal: appTheme.spacing.md,
@@ -299,91 +326,77 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  tripCard: {
+  routeGrid: {
     marginHorizontal: appTheme.spacing.md,
-    marginBottom: 10,
+    gap: 10,
+  },
+  routeCard: {
     borderRadius: 18,
     backgroundColor: '#fff',
     padding: 14,
     borderWidth: 1,
     borderColor: '#DCE7E1',
   },
-  tripTopRow: {
+  routeCardTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 12,
+    gap: 10,
   },
-  tripTitleWrap: {
+  routeName: {
     flex: 1,
-  },
-  tripRoute: {
     color: appTheme.colors.primaryNavy,
     fontSize: 15,
     fontWeight: '800',
   },
-  tripMeta: {
-    marginTop: 2,
-    color: appTheme.colors.textMuted,
+  routeTime: {
+    color: '#2E7D57',
     fontSize: 12,
-    fontWeight: '500',
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#E6F4EE',
-  },
-  statusBadgeText: {
-    color: '#2C7D5B',
-    fontSize: 11,
     fontWeight: '800',
-    textTransform: 'uppercase',
   },
-  tripGrid: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-  },
-  tripMetric: {
-    flex: 1,
-    borderRadius: 12,
-    backgroundColor: '#F7FBF8',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: '#E3EEE7',
-  },
-  tripMetricLabel: {
+  routeId: {
+    marginTop: 4,
     color: appTheme.colors.textMuted,
     fontSize: 11,
     fontWeight: '600',
   },
-  tripMetricValue: {
-    marginTop: 4,
-    color: appTheme.colors.primaryNavy,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  tripStops: {
-    marginTop: 10,
+  routePath: {
+    marginTop: 6,
     color: appTheme.colors.textCharcoal,
     fontSize: 13,
     fontWeight: '600',
   },
-  emptyCard: {
-    marginHorizontal: appTheme.spacing.md,
-    marginTop: 8,
-    padding: 16,
+  routeFooter: {
+    marginTop: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  emptyTitle: {
+  routeFare: {
+    color: appTheme.colors.primaryNavy,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  routeLink: {
+    color: '#2E7D57',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  tipCard: {
+    marginHorizontal: appTheme.spacing.md,
+    marginTop: 12,
+    marginBottom: 10,
+    padding: 14,
+  },
+  tipTitle: {
     color: appTheme.colors.primaryNavy,
     fontSize: 15,
     fontWeight: '800',
   },
-  emptyText: {
+  tipText: {
     marginTop: 4,
     color: appTheme.colors.textMuted,
     fontSize: 13,
+    lineHeight: 18,
   },
 });

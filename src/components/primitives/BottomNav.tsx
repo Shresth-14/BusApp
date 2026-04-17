@@ -12,7 +12,7 @@ type BottomNavProps = {
 
 const tabs: Array<{ key: BottomTabKey; label: string }> = [
   { key: 'routes', label: 'Stop' },
-  { key: 'tickets', label: 'Trips' },
+  { key: 'tickets', label: 'Saved' },
   { key: 'profile', label: 'Journey' },
 ];
 

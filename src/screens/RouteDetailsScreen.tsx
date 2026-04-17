@@ -261,12 +261,10 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 22,
   },
   topActions: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    right: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   backBtn: {
     height: 36,
