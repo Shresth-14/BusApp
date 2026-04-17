@@ -10,63 +10,71 @@ import {
 } from './src/screens';
 
 export default function App() {
-  const [tab, setTab] = useState<BottomTabKey>('tickets');
-  const [selectedRouteId, setSelectedRouteId] = useState('HRY-RTE-001');
-  const [previousTab, setPreviousTab] = useState<BottomTabKey>('tickets');
-  const [plannerSource, setPlannerSource] = useState('Sonipat');
-  const [plannerDestination, setPlannerDestination] = useState('Delhi');
+  const [tab, setTab] = useState<BottomTabKey>('routes');
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [isTrackingRoute, setIsTrackingRoute] = useState(false);
 
   const handleTabPress = (newTab: BottomTabKey) => {
-    setPreviousTab(tab);
     setTab(newTab);
+    // Reset tracking when switching tabs
+    if (newTab !== 'routes' || newTab === 'routes') {
+      setIsTrackingRoute(false);
+    }
+  };
+
+  const handleSelectRoute = (routeId: string) => {
+    setSelectedRouteId(routeId);
+    setIsTrackingRoute(true);
   };
 
   const handleGoBack = () => {
-    // Go back to trip planner
-    setPreviousTab(tab);
-    setTab('tickets');
+    setIsTrackingRoute(false);
+    setSelectedRouteId(null);
   };
 
   const renderScreen = () => {
+    // If tracking a route, show live tracking
+    if (isTrackingRoute && selectedRouteId) {
+      return (
+        <LiveTrackingScreen
+          onTabPress={handleTabPress}
+          routeId={selectedRouteId}
+          onRouteSelect={() => {}}
+          onGoBack={handleGoBack}
+        />
+      );
+    }
+
+    // Otherwise show tab content
     switch (tab) {
       case 'routes':
         return (
           <RouteDetailsScreen
             onTabPress={handleTabPress}
-            routeId={selectedRouteId}
-            onRouteSelect={(routeId) => {
-              setSelectedRouteId(routeId);
-            }}
+            routeId={selectedRouteId || 'HRY-RTE-001'}
+            onRouteSelect={handleSelectRoute}
           />
         );
       case 'tickets':
         return (
           <TripPlannerScreen
             onTabPress={handleTabPress}
-            initialSource={plannerSource}
-            initialDestination={plannerDestination}
-            onRouteSelect={(routeId, source, destination) => {
+            initialSource="Sonipat"
+            initialDestination="Delhi"
+            onRouteSelect={(routeId) => {
               setSelectedRouteId(routeId);
-              setPlannerSource(source);
-              setPlannerDestination(destination);
-              // Auto-navigate to live tracking
-              setPreviousTab('tickets');
-              setTab('live');
+              setIsTrackingRoute(true);
             }}
           />
         );
       case 'profile':
         return <AlertsScreen onTabPress={handleTabPress} />;
-      case 'live':
       default:
         return (
-          <LiveTrackingScreen
+          <RouteDetailsScreen
             onTabPress={handleTabPress}
-            routeId={selectedRouteId}
-            onRouteSelect={(routeId) => {
-              setSelectedRouteId(routeId);
-            }}
-            onGoBack={handleGoBack}
+            routeId={selectedRouteId || 'HRY-RTE-001'}
+            onRouteSelect={handleSelectRoute}
           />
         );
     }
