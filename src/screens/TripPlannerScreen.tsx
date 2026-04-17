@@ -153,7 +153,7 @@ export function TripPlannerScreen({
 
             <Pressable
               style={styles.headerHomeBtn}
-              onPress={() => onTabPress?.('live')}
+              onPress={() => onTabPress?.('tickets')}
             >
               <AppIcon name="home" size={18} color={appTheme.colors.primaryNavy} />
             </Pressable>
@@ -161,7 +161,7 @@ export function TripPlannerScreen({
 
           <View style={styles.headerMetaRow}>
             <View style={styles.metaPill}>
-              <Text style={styles.metaPillText}>Live Routes {isRoutesLoading ? '...' : routes.length}</Text>
+              <Text style={styles.metaPillText}>Routes {isRoutesLoading ? '...' : routes.length}</Text>
             </View>
             <View style={styles.metaPillSoft}>
               <Text style={styles.metaPillSoftText}>Haryana Roadways</Text>

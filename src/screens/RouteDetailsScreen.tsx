@@ -25,6 +25,14 @@ type ArrivalItem = {
   eta: string;
 };
 
+type RouteCardItem = {
+  route_id: string;
+  route_name: string;
+  from: string;
+  to: string;
+  etaMinutes: number;
+};
+
 export function RouteDetailsScreen({
   onTabPress,
   routeId = 'HRY-RTE-001',
@@ -34,7 +42,6 @@ export function RouteDetailsScreen({
   const { height, isCompact, isSE, isPlusMax } = useDeviceClass();
   const [route, setRoute] = useState<BackendRouteDetails | null>(null);
   const [allRoutes, setAllRoutes] = useState<BackendRouteSummary[]>([]);
-  const [showAllRoutes, setShowAllRoutes] = useState(false);
   const [routeQuery, setRouteQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [selectedPlatform, setSelectedPlatform] = useState('C');
@@ -126,6 +133,20 @@ export function RouteDetailsScreen({
     });
   }, [allRoutes, routeQuery]);
 
+  const routeCards = useMemo<RouteCardItem[]>(() => {
+    return filteredRoutes.map((item) => {
+      const [fromPart, toPart] = item.route_name.split('->').map((part) => part.trim());
+
+      return {
+        route_id: item.route_id,
+        route_name: item.route_name,
+        from: fromPart || item.route_name,
+        to: toPart || 'Destination',
+        etaMinutes: item.estimated_time_minutes,
+      };
+    });
+  }, [filteredRoutes]);
+
   return (
     <ScreenShell>
       <View style={[styles.mapWrap, isCompact && styles.mapWrapCompact]}>
@@ -161,71 +182,51 @@ export function RouteDetailsScreen({
         <ScrollView contentContainerStyle={[styles.panelContent, isCompact && styles.panelContentCompact]}>
           <View style={styles.routeSwitchCard}>
             <View style={styles.routeSwitchHead}>
-              <Text style={styles.routeSwitchTitle}>Switch Route / रूट बदलें</Text>
-              <Pressable style={styles.routeSwitchBtn} onPress={() => setShowAllRoutes((prev) => !prev)}>
-                <Text style={styles.routeSwitchBtnText}>{showAllRoutes ? 'Hide' : 'Browse all'}</Text>
-              </Pressable>
+              <Text style={styles.routeSwitchTitle}>All Routes / सभी रूट</Text>
+              <Text style={styles.routeSwitchHint}>Tap a route to view live tracking</Text>
             </View>
 
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.routeChipRow}
-            >
-              {filteredRoutes.map((item) => {
+            <View style={styles.routeSearchWrap}>
+              <MaterialCommunityIcons name="magnify" size={16} color={appTheme.colors.textMuted} />
+              <TextInput
+                value={routeQuery}
+                onChangeText={setRouteQuery}
+                placeholder="Search by route name, id, or city"
+                placeholderTextColor={appTheme.colors.textMuted}
+                style={styles.routeSearchInput}
+              />
+            </View>
+
+            <ScrollView nestedScrollEnabled style={styles.routeListScroll}>
+              {routeCards.map((item) => {
                 const active = item.route_id === routeId;
 
                 return (
                   <Pressable
-                    key={item.route_id}
-                    style={[styles.routeChip, active && styles.routeChipActive]}
-                    onPress={() => onRouteSelect?.(item.route_id)}
+                    key={`list-${item.route_id}`}
+                    style={[styles.routeCard, active && styles.routeCardActive]}
+                    onPress={() => {
+                      onRouteSelect?.(item.route_id);
+                    }}
                   >
-                    <Text style={[styles.routeChipCode, active && styles.routeChipCodeActive]}>{item.route_id}</Text>
+                    <View style={styles.routeListHeader}>
+                      <Text style={styles.routeListName} numberOfLines={1}>{item.route_name}</Text>
+                      <Text style={styles.routeListMeta}>{item.etaMinutes} min</Text>
+                    </View>
+                    <Text style={styles.routeListCode}>{item.route_id}</Text>
+                    <Text style={styles.routeListJourney} numberOfLines={1}>
+                      {item.from} → {item.to}
+                    </Text>
                   </Pressable>
                 );
               })}
-            </ScrollView>
 
-            {showAllRoutes && (
-              <View style={styles.routeListWrap}>
-                <View style={styles.routeSearchWrap}>
-                  <MaterialCommunityIcons name="magnify" size={16} color={appTheme.colors.textMuted} />
-                  <TextInput
-                    value={routeQuery}
-                    onChangeText={setRouteQuery}
-                    placeholder="Filter by route id or city"
-                    placeholderTextColor={appTheme.colors.textMuted}
-                    style={styles.routeSearchInput}
-                  />
+              {!routeCards.length && (
+                <View style={styles.routeListEmpty}>
+                  <Text style={styles.routeListEmptyText}>No routes match your search.</Text>
                 </View>
-
-                <ScrollView nestedScrollEnabled style={styles.routeListScroll}>
-                  {filteredRoutes.map((item) => (
-                    <Pressable
-                      key={`list-${item.route_id}`}
-                      style={[styles.routeListItem, item.route_id === routeId && styles.routeListItemActive]}
-                      onPress={() => {
-                        onRouteSelect?.(item.route_id);
-                        setShowAllRoutes(false);
-                      }}
-                    >
-                      <View style={styles.routeListHeader}>
-                        <Text style={styles.routeListCode}>{item.route_id}</Text>
-                        <Text style={styles.routeListMeta}>{item.estimated_time_minutes} min</Text>
-                      </View>
-                      <Text style={styles.routeListName} numberOfLines={1}>{item.route_name}</Text>
-                    </Pressable>
-                  ))}
-
-                  {!filteredRoutes.length && (
-                    <View style={styles.routeListEmpty}>
-                      <Text style={styles.routeListEmptyText}>No routes match your search.</Text>
-                    </View>
-                  )}
-                </ScrollView>
-              </View>
-            )}
+              )}
+            </ScrollView>
           </View>
 
           <View style={styles.stationRow}>
@@ -383,52 +384,30 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   routeSwitchHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 2,
     marginBottom: 8,
   },
   routeSwitchTitle: {
     color: appTheme.colors.primaryNavy,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
   },
-  routeSwitchBtn: {
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#C9DCD4',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  routeSwitchBtnText: {
-    color: '#2C7D5B',
+  routeSwitchHint: {
+    color: appTheme.colors.textMuted,
     fontSize: 12,
-    fontWeight: '700',
   },
-  routeChipRow: {
-    gap: 8,
-    paddingRight: 10,
-  },
-  routeChip: {
+  routeCard: {
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#CFE0D8',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
   },
-  routeChipActive: {
+  routeCardActive: {
     borderColor: '#2C7D5B',
     backgroundColor: '#E6F4EE',
-  },
-  routeChipCode: {
-    color: appTheme.colors.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  routeChipCodeActive: {
-    color: '#1B5E20',
   },
   routeListWrap: {
     marginTop: 9,
@@ -454,30 +433,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   routeListScroll: {
-    maxHeight: 170,
-  },
-  routeListItem: {
-    borderWidth: 1,
-    borderColor: '#D7E6DF',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-    marginBottom: 7,
-  },
-  routeListItemActive: {
-    borderColor: '#8FC0AB',
-    backgroundColor: '#EFF8F4',
+    maxHeight: 260,
   },
   routeListHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 8,
   },
   routeListCode: {
     color: '#2E7D32',
     fontSize: 11,
     fontWeight: '700',
+    marginTop: 2,
   },
   routeListMeta: {
     color: appTheme.colors.textMuted,
@@ -485,10 +453,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   routeListName: {
-    marginTop: 2,
     color: appTheme.colors.primaryNavy,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
+    flex: 1,
+  },
+  routeListJourney: {
+    marginTop: 3,
+    color: appTheme.colors.textCharcoal,
+    fontSize: 12,
+    fontWeight: '500',
   },
   routeListEmpty: {
     borderWidth: 1,

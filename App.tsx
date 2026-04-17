@@ -10,16 +10,13 @@ import {
 } from './src/screens';
 
 export default function App() {
-  const [tab, setTab] = useState<BottomTabKey>('routes');
+  const [tab, setTab] = useState<BottomTabKey>('tickets');
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
   const [isTrackingRoute, setIsTrackingRoute] = useState(false);
 
   const handleTabPress = (newTab: BottomTabKey) => {
+    setIsTrackingRoute(false);
     setTab(newTab);
-    // Reset tracking when switching tabs
-    if (newTab !== 'routes' || newTab === 'routes') {
-      setIsTrackingRoute(false);
-    }
   };
 
   const handleSelectRoute = (routeId: string) => {
@@ -30,6 +27,7 @@ export default function App() {
   const handleGoBack = () => {
     setIsTrackingRoute(false);
     setSelectedRouteId(null);
+    setTab('tickets');
   };
 
   const renderScreen = () => {

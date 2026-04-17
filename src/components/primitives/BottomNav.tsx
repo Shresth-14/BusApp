@@ -11,14 +11,12 @@ type BottomNavProps = {
 };
 
 const tabs: Array<{ key: BottomTabKey; label: string }> = [
-  { key: 'live', label: 'Live' },
-  { key: 'tickets', label: 'Search' },
   { key: 'routes', label: 'Stop' },
+  { key: 'tickets', label: 'Search' },
   { key: 'profile', label: 'Journey' },
 ];
 
 const tabIcons: Record<BottomTabKey, AppIconName> = {
-  live: 'live',
   routes: 'routes',
   tickets: 'tickets',
   profile: 'alerts',

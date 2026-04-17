@@ -1,4 +1,4 @@
-export type BottomTabKey = 'live' | 'routes' | 'tickets' | 'profile';
+export type BottomTabKey = 'routes' | 'tickets' | 'profile';
 
 export type CrowdLevel = 'low' | 'moderate' | 'high';
 
