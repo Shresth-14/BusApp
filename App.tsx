@@ -15,19 +15,21 @@ export default function App() {
   const [isTrackingRoute, setIsTrackingRoute] = useState(false);
 
   const handleTabPress = (newTab: BottomTabKey) => {
-    setIsTrackingRoute(false);
     setTab(newTab);
   };
 
   const handleSelectRoute = (routeId: string) => {
+    setSelectedRouteId(routeId);
+  };
+
+  const handleShowMap = (routeId: string) => {
     setSelectedRouteId(routeId);
     setIsTrackingRoute(true);
   };
 
   const handleGoBack = () => {
     setIsTrackingRoute(false);
-    setSelectedRouteId(null);
-    setTab('tickets');
+    setTab('routes');
   };
 
   const renderScreen = () => {
@@ -37,7 +39,6 @@ export default function App() {
         <LiveTrackingScreen
           onTabPress={handleTabPress}
           routeId={selectedRouteId}
-          onRouteSelect={() => {}}
           onGoBack={handleGoBack}
         />
       );
@@ -51,6 +52,7 @@ export default function App() {
             onTabPress={handleTabPress}
             routeId={selectedRouteId || 'HRY-RTE-001'}
             onRouteSelect={handleSelectRoute}
+            onShowMap={handleShowMap}
           />
         );
       case 'tickets':
@@ -61,7 +63,7 @@ export default function App() {
             initialDestination="Delhi"
             onRouteSelect={(routeId) => {
               setSelectedRouteId(routeId);
-              setIsTrackingRoute(true);
+              setTab('routes');
             }}
           />
         );
@@ -73,6 +75,7 @@ export default function App() {
             onTabPress={handleTabPress}
             routeId={selectedRouteId || 'HRY-RTE-001'}
             onRouteSelect={handleSelectRoute}
+            onShowMap={handleShowMap}
           />
         );
     }

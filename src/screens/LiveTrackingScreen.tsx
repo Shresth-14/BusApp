@@ -128,6 +128,7 @@ export function LiveTrackingScreen({
 
   const mapCenter = liveBus?.current_location ?? route?.polyline.points[0] ?? { lat: 28.989, lng: 77.02 };
   const routePath = route?.polyline.points ?? [];
+  const tripFare = Math.max(20, Math.round((route?.distance_km ?? 0) * 4.5));
   const markers = useMemo(() => {
     const stopMarkers =
       route?.stops.slice(0, 6).map((stop, idx) => ({
@@ -179,26 +180,41 @@ export function LiveTrackingScreen({
           <View style={styles.infoHeader}>
             <View>
               <Text style={styles.busNumber}>{busNumber}</Text>
-              <Text style={styles.routeInfo}>
-                {liveBus.route_name}
-              </Text>
+              <Text style={styles.routeInfo}>{route?.route_name || liveBus.route_name || 'Active route'}</Text>
             </View>
             <View style={styles.etaContainer}>
               <Text style={styles.etaLabel}>ETA</Text>
               <Text style={styles.eta}>{liveBus.eta_to_next_stop}m</Text>
             </View>
           </View>
+
+          <View style={styles.metricsRow}>
+            <View style={styles.metricCard}>
+              <Text style={styles.metricLabel}>Trip time</Text>
+              <Text style={styles.metricValue}>{route?.estimated_time_minutes ?? '--'} min</Text>
+            </View>
+            <View style={styles.metricCard}>
+              <Text style={styles.metricLabel}>Fare</Text>
+              <Text style={styles.metricValue}>₹{tripFare}</Text>
+            </View>
+            <View style={styles.metricCard}>
+              <Text style={styles.metricLabel}>Occupancy</Text>
+              <Text style={styles.metricValue}>{liveBus.occupancy}</Text>
+            </View>
+          </View>
           
           <View style={styles.infoFooter}>
             <View style={styles.nextStopContainer}>
+              <Text style={styles.nextStopLabel}>Next bus arrives in</Text>
+              <Text style={styles.nextStopEta}>{liveBus.eta_to_next_stop} min</Text>
               <Text style={styles.nextStopLabel}>Next Stop</Text>
               <Text style={styles.nextStop} numberOfLines={1}>
                 {liveBus.next_stop?.name || 'Coming soon'}
               </Text>
             </View>
-            <Pressable style={styles.expandBtn} onPress={() => onTabPress?.('routes')}>
-              <AppIcon name="share" size={18} color={appTheme.colors.primaryNavy} />
-            </Pressable>
+            <View style={styles.statusPill}>
+              <Text style={styles.statusPillText}>{liveBus.status}</Text>
+            </View>
           </View>
         </View>
       )}
@@ -300,10 +316,11 @@ const styles = StyleSheet.create({
   infoFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     borderTopWidth: 1,
     borderTopColor: '#f0f0f0',
     paddingTop: 12,
+    gap: 12,
   },
   nextStopContainer: {
     flex: 1,
@@ -314,18 +331,55 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 2,
   },
+  nextStopEta: {
+    fontSize: 17,
+    color: appTheme.colors.statusOnline,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
   nextStop: {
     fontSize: 14,
     fontWeight: '600',
     color: appTheme.colors.primaryNavy,
   },
-  expandBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f5f5f5',
+  metricsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  metricCard: {
+    flex: 1,
+    borderRadius: 12,
+    backgroundColor: '#F7FBF8',
+    borderWidth: 1,
+    borderColor: '#E3EEE7',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+  },
+  metricLabel: {
+    fontSize: 11,
+    color: appTheme.colors.textMuted,
+    fontWeight: '600',
+  },
+  metricValue: {
+    marginTop: 4,
+    fontSize: 13,
+    color: appTheme.colors.primaryNavy,
+    fontWeight: '700',
+  },
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#E6F4EE',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  statusPillText: {
+    color: '#2C7D5B',
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
   },
   errorCard: {
     position: 'absolute',

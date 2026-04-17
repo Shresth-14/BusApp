@@ -3,26 +3,17 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BottomTabKey } from '../types/ui';
 import { appTheme } from '../theme';
-import { AppIcon, BottomNav, ScreenShell } from '../components/primitives';
-import { LeafletMapCard } from '../components/sections';
+import { AppIcon, AppButton, BottomNav, ScreenShell } from '../components/primitives';
 import { useAppFeedback } from '../feedback/useAppFeedback';
+import { getAllRoutes } from '../api/haryanaApi';
+import { BackendRouteSummary } from '../types/backend';
 import { useDeviceClass } from '../utils/device';
-import { getAllRoutes, getRouteDetails } from '../api/haryanaApi';
-import { BackendRouteDetails, BackendRouteSummary } from '../types/backend';
 
 type RouteDetailsScreenProps = {
   onTabPress?: (tab: BottomTabKey) => void;
   routeId?: string;
   onRouteSelect?: (routeId: string) => void;
-};
-
-type ArrivalItem = {
-  id: string;
-  line: string;
-  color: string;
-  name: string;
-  platform: string;
-  eta: string;
+  onShowMap?: (routeId: string) => void;
 };
 
 type RouteCardItem = {
@@ -37,44 +28,18 @@ export function RouteDetailsScreen({
   onTabPress,
   routeId = 'HRY-RTE-001',
   onRouteSelect,
+  onShowMap,
 }: RouteDetailsScreenProps) {
   const { notify } = useAppFeedback();
-  const { height, isCompact, isSE, isPlusMax } = useDeviceClass();
-  const [route, setRoute] = useState<BackendRouteDetails | null>(null);
+  const { isCompact } = useDeviceClass();
   const [allRoutes, setAllRoutes] = useState<BackendRouteSummary[]>([]);
   const [routeQuery, setRouteQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedPlatform, setSelectedPlatform] = useState('C');
-  const mapRatio = isSE ? 0.29 : isCompact ? 0.31 : isPlusMax ? 0.37 : 0.34;
-  const mapHeight = Math.max(200, Math.min(320, Math.round(height * mapRatio)));
+  const [selectedRouteId, setSelectedRouteId] = useState(routeId);
 
   useEffect(() => {
-    let mounted = true;
-
-    const load = async () => {
-      try {
-        setIsLoading(true);
-        const details = await getRouteDetails(routeId);
-        if (!mounted) return;
-        setRoute(details);
-        setSelectedPlatform(details.stops[0]?.platforms?.[0] || 'A');
-      } catch (error) {
-        if (!mounted) return;
-        const message = error instanceof Error ? error.message : 'Unable to load route details.';
-        notify(message, {
-          analyticsEvent: 'route_details_error',
-        });
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    };
-
-    load();
-
-    return () => {
-      mounted = false;
-    };
-  }, [routeId, notify]);
+    setSelectedRouteId(routeId);
+  }, [routeId]);
 
   useEffect(() => {
     let mounted = true;
@@ -99,28 +64,6 @@ export function RouteDetailsScreen({
       mounted = false;
     };
   }, [notify]);
-
-  const arrivals = useMemo<ArrivalItem[]>(
-    () =>
-      (route?.stops || []).slice(0, 5).map((stop, index) => ({
-        id: stop.stop_id,
-        line: route?.route_id.replace('HRY-RTE-', '') || 'HRY',
-        color: ['#92A93B', '#2C8DB7', '#C9513D', '#7183C2', '#46A97A'][index % 5],
-        name: `${stop.name} / ${stop.city}`,
-        platform: stop.platforms[0] || selectedPlatform,
-        eta: `${Math.max(2, stop.estimated_arrival_from_start_minutes)} min`,
-      })),
-    [route, selectedPlatform]
-  );
-
-  const mapCenter = route?.polyline.points[0] ?? { lat: 28.99, lng: 77.02 };
-  const mapPath = route?.polyline.points ?? [];
-  const mapMarkers = (route?.stops || []).slice(0, 6).map((stop, index) => ({
-    lat: stop.coordinates.lat,
-    lng: stop.coordinates.lng,
-    label: stop.platforms[0] || `${index + 1}`,
-    isPrimary: index === 0,
-  }));
 
   const filteredRoutes = useMemo(() => {
     const query = routeQuery.trim().toLowerCase();
@@ -147,39 +90,46 @@ export function RouteDetailsScreen({
     });
   }, [filteredRoutes]);
 
+  const selectedRouteSummary = useMemo(() => {
+    const summary = allRoutes.find((item) => item.route_id === selectedRouteId) || allRoutes[0];
+
+    if (!summary) {
+      return null;
+    }
+
+    const [fromPart, toPart] = summary.route_name.split('->').map((part) => part.trim());
+    const fareEstimate = Math.max(20, Math.round(summary.distance_km * 4.5));
+
+    return {
+      ...summary,
+      from: fromPart || summary.route_name,
+      to: toPart || 'Destination',
+      fareEstimate,
+    };
+  }, [allRoutes, selectedRouteId]);
+
   return (
     <ScreenShell>
-      <View style={[styles.mapWrap, isCompact && styles.mapWrapCompact]}>
-        <LeafletMapCard
-          height={mapHeight}
-          rounded={false}
-          center={mapCenter}
-          zoom={13}
-          markers={mapMarkers}
-          routePath={mapPath}
-        />
-
-        <View style={styles.topActions}>
-          <Pressable style={styles.backBtn} onPress={() => onTabPress?.('tickets')}>
-            <AppIcon name="back" size={20} color={appTheme.colors.primaryNavy} />
-            <Text style={styles.backText}>Back</Text>
-          </Pressable>
-
-          <Pressable
-            style={styles.circleBtn}
-            onPress={() =>
-              notify('Stop saved to favorites.', {
-                analyticsEvent: 'route_stop_favorited',
-              })
-            }
-          >
-            <MaterialCommunityIcons name="heart-outline" size={18} color={appTheme.colors.primaryNavy} />
-          </Pressable>
-        </View>
-      </View>
-
       <View style={styles.panelWrap}>
         <ScrollView contentContainerStyle={[styles.panelContent, isCompact && styles.panelContentCompact]}>
+          <View style={styles.topActions}>
+            <Pressable style={styles.backBtn} onPress={() => onTabPress?.('tickets')}>
+              <AppIcon name="back" size={20} color={appTheme.colors.primaryNavy} />
+              <Text style={styles.backText}>Back</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.circleBtn}
+              onPress={() =>
+                notify('Route saved to favorites.', {
+                  analyticsEvent: 'route_favorited',
+                })
+              }
+            >
+              <MaterialCommunityIcons name="heart-outline" size={18} color={appTheme.colors.primaryNavy} />
+            </Pressable>
+          </View>
+
           <View style={styles.routeSwitchCard}>
             <View style={styles.routeSwitchHead}>
               <Text style={styles.routeSwitchTitle}>All Routes / सभी रूट</Text>
@@ -206,6 +156,7 @@ export function RouteDetailsScreen({
                     key={`list-${item.route_id}`}
                     style={[styles.routeCard, active && styles.routeCardActive]}
                     onPress={() => {
+                      setSelectedRouteId(item.route_id);
                       onRouteSelect?.(item.route_id);
                     }}
                   >
@@ -229,81 +180,44 @@ export function RouteDetailsScreen({
             </ScrollView>
           </View>
 
-          <View style={styles.stationRow}>
-            <View style={styles.stationLeft}>
-              <MaterialCommunityIcons name="flag-outline" size={20} color={appTheme.colors.primaryNavy} />
-              <Text style={[styles.stationName, isCompact && styles.stationNameCompact]} numberOfLines={1}>
-                {isLoading ? 'Loading route...' : route?.stops[0]?.name || 'Route stop'}
-              </Text>
-            </View>
-
-            <Pressable
-              style={styles.favoriteBtn}
-              onPress={() =>
-                notify('Sonipat Bus Stand saved as favorite.', {
-                  analyticsEvent: 'route_station_favorite',
-                })
-              }
-            >
-              <MaterialCommunityIcons name="heart" size={16} color="#F0527B" />
-            </Pressable>
-          </View>
-
-          <Text style={styles.sectionLabel}>Select platform / प्लेटफॉर्म चुनें</Text>
-
-          <View style={styles.platformRow}>
-            {(route?.stops[0]?.platforms?.length ? route.stops[0].platforms : ['A', 'B', 'C', 'D']).map((platform) => {
-              const selected = platform === selectedPlatform;
-
-              return (
-                <Pressable
-                  key={platform}
-                  style={[styles.platformChip, selected && styles.platformChipActive]}
-                  onPress={() => setSelectedPlatform(platform)}
-                >
-                  <Text style={[styles.platformText, selected && styles.platformTextActive]}>{platform}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          <View style={styles.arrivalsList}>
-            {arrivals.map((item) => (
-              <View key={item.id} style={styles.arrivalRow}>
-                <View style={styles.arrivalLeft}>
-                  <MaterialCommunityIcons
-                    name="bus-stop"
-                    size={18}
-                    color={appTheme.colors.textMuted}
-                    style={styles.busIcon}
-                  />
-
-                  <View style={[styles.lineBadge, { backgroundColor: item.color }]}>
-                    <Text style={styles.lineBadgeText}>{item.line}</Text>
-                  </View>
-
-                  <View style={styles.arrivalTextWrap}>
-                    <Text style={[styles.arrivalName, isCompact && styles.arrivalNameCompact]} numberOfLines={1}>
-                      {item.name}
-                    </Text>
-                    <Text style={styles.arrivalMeta} numberOfLines={1}>
-                      Platform {item.platform} · Accessible / सुलभ
-                    </Text>
-                  </View>
+          {selectedRouteSummary && (
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryHeader}>
+                <View style={styles.summaryTitleWrap}>
+                  <Text style={styles.summaryTitle}>{selectedRouteSummary.route_name}</Text>
+                  <Text style={styles.summarySubtitle}>{selectedRouteSummary.route_id}</Text>
                 </View>
-
-                <Text style={[item.eta === '<1 min' ? styles.etaSoon : styles.eta, isCompact && styles.etaCompact]}>
-                  {item.eta}
-                </Text>
+                <Text style={styles.summaryPrice}>₹{selectedRouteSummary.fareEstimate}</Text>
               </View>
-            ))}
 
-            {!arrivals.length && (
-              <View style={styles.arrivalRow}>
-                <Text style={styles.arrivalMeta}>No stop timing data available.</Text>
+              <View style={styles.summaryGrid}>
+                <View style={styles.summaryMetric}>
+                  <Text style={styles.summaryMetricLabel}>Time</Text>
+                  <Text style={styles.summaryMetricValue}>{selectedRouteSummary.estimated_time_minutes} min</Text>
+                </View>
+                <View style={styles.summaryMetric}>
+                  <Text style={styles.summaryMetricLabel}>Distance</Text>
+                  <Text style={styles.summaryMetricValue}>{selectedRouteSummary.distance_km} km</Text>
+                </View>
+                <View style={styles.summaryMetric}>
+                  <Text style={styles.summaryMetricLabel}>Fare</Text>
+                  <Text style={styles.summaryMetricValue}>Est. ₹{selectedRouteSummary.fareEstimate}</Text>
+                </View>
               </View>
-            )}
-          </View>
+
+              <Text style={styles.summaryRouteLine} numberOfLines={1}>
+                {selectedRouteSummary.from} → {selectedRouteSummary.to}
+              </Text>
+
+              <View style={styles.summaryActions}>
+                <AppButton
+                  title="Show Map"
+                  onPress={() => onShowMap?.(selectedRouteSummary.route_id)}
+                  style={styles.showMapBtn}
+                />
+              </View>
+            </View>
+          )}
         </ScrollView>
       </View>
 
@@ -476,6 +390,81 @@ const styles = StyleSheet.create({
     color: appTheme.colors.textMuted,
     fontSize: 12,
     textAlign: 'center',
+  },
+  summaryCard: {
+    marginTop: appTheme.spacing.md,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D7E6DF',
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  summaryTitleWrap: {
+    flex: 1,
+  },
+  summaryTitle: {
+    color: appTheme.colors.primaryNavy,
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  summarySubtitle: {
+    marginTop: 2,
+    color: appTheme.colors.textMuted,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  summaryPrice: {
+    color: '#2E7D32',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  summaryGrid: {
+    marginTop: 12,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  summaryMetric: {
+    flex: 1,
+    borderRadius: 12,
+    backgroundColor: '#F7FBF8',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#E3EEE7',
+  },
+  summaryMetricLabel: {
+    color: appTheme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  summaryMetricValue: {
+    marginTop: 4,
+    color: appTheme.colors.primaryNavy,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  summaryRouteLine: {
+    marginTop: 12,
+    color: appTheme.colors.textCharcoal,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  summaryActions: {
+    marginTop: 12,
+  },
+  showMapBtn: {
+    width: '100%',
   },
   stationRow: {
     flexDirection: 'row',
